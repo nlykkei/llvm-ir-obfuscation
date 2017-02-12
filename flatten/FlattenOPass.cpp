@@ -137,7 +137,7 @@ struct FlattenO : public FunctionPass {
                 BBSkip.push_back(IfTrueTerm->getParent());
 
                 // Setup 'if.cont' BasicBlock
-                BrInst->getParent()->setName(std::string(EntryBB.getName()) + std::string(".if.cont"));
+                BrInst->getParent()->setName(std::string(BI->getName()) + std::string(".if.cont"));
                 Builder.SetInsertPoint(BrInst);
                 Builder.CreateStore(
                     ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInst->getSuccessor(1)]), VAlloc);
