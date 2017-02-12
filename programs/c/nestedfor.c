@@ -9,4 +9,6 @@ int main() {
       count++;
     }
   }
+
+  return count;
 }

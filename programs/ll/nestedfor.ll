@@ -52,7 +52,7 @@ for.inc5:                                         ; preds = %for.end
   br label %for.cond
 
 for.end7:                                         ; preds = %for.cond
-  %6 = load i32, i32* %retval, align 4
+  %6 = load i32, i32* %count, align 4
   ret i32 %6
 }
 
