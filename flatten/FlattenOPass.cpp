@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+#define DEBUG 0
+
 using namespace llvm;
 
 namespace
@@ -121,30 +123,31 @@ struct FlattenO : public FunctionPass {
         IRBuilder<> Builder(&EntryBB.front());
         Value* VAlloc = Builder.CreateAlloca(Type::getInt32Ty(F.getContext()), 0, "switch_index");
 
-        insertOpaqueSwitchIndex(&EntryBB.back(), 25, VAlloc);
-
         if(BrInstEntryBB->isConditional()) {
             TerminatorInst* SplitTerm = EntryBB.getTerminator(); // br label %switch
             TerminatorInst* IfTrueTerm = SplitBlockAndInsertIfThen(BrInstEntryBB->getCondition(), SplitTerm, false);
 
             // Setup 'if.true' BasicBlock
             IfTrueTerm->getParent()->setName(std::string(EntryBB.getName()) + std::string(".if.true"));
-            Builder.SetInsertPoint(IfTrueTerm);
-            Builder.CreateStore(
-                ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInstEntryBB->getSuccessor(0)]), VAlloc);
+            // Builder.SetInsertPoint(IfTrueTerm);
+            // Builder.CreateStore(
+            //    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInstEntryBB->getSuccessor(0)]), VAlloc);
+            insertOpaqueSwitchIndex(IfTrueTerm, BBMap[BrInstEntryBB->getSuccessor(0)], VAlloc);
             IfTrueTerm->setSuccessor(0, SwitchBB);
             BBSkip.push_back(IfTrueTerm->getParent());
 
             // Setup 'if.cont' BasicBlock
             SplitTerm->getParent()->setName(std::string(EntryBB.getName()) + std::string(".if.cont"));
-            Builder.SetInsertPoint(SplitTerm);
-            Builder.CreateStore(
-                ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInstEntryBB->getSuccessor(1)]), VAlloc);
+            // Builder.SetInsertPoint(SplitTerm);
+            // Builder.CreateStore(
+            //    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInstEntryBB->getSuccessor(1)]), VAlloc);
+            insertOpaqueSwitchIndex(SplitTerm, BBMap[BrInstEntryBB->getSuccessor(1)], VAlloc);
             BBSkip.push_back(SplitTerm->getParent());
         } else {
-            Builder.SetInsertPoint(EntryBB.getTerminator());
-            Builder.CreateStore(
-                ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInstEntryBB->getSuccessor(0)]), VAlloc);
+            // Builder.SetInsertPoint(EntryBB.getTerminator());
+            // Builder.CreateStore(
+            //    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInstEntryBB->getSuccessor(0)]), VAlloc);
+            insertOpaqueSwitchIndex(EntryBB.getTerminator(), BBMap[BrInstEntryBB->getSuccessor(0)], VAlloc);
         }
 
         BrInstEntryBB->eraseFromParent(); // Remove original 'entry' BasicBlock branch from 'switch' BasicBlock
@@ -180,24 +183,28 @@ struct FlattenO : public FunctionPass {
 
                 // Setup 'if.true' BasicBlock
                 IfTrueTerm->getParent()->setName(std::string(BI->getName()) + std::string(".if.true"));
-                Builder.SetInsertPoint(IfTrueTerm);
-                Builder.CreateStore(
-                    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInst->getSuccessor(0)]), VAlloc);
+                // Builder.SetInsertPoint(IfTrueTerm);
+                // Builder.CreateStore(
+                //    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInst->getSuccessor(0)]), VAlloc);
+                insertOpaqueSwitchIndex(IfTrueTerm, BBMap[BrInst->getSuccessor(0)], VAlloc);
                 IfTrueTerm->setSuccessor(0, SwitchBB);
                 BBSkip.push_back(IfTrueTerm->getParent());
 
                 // Setup 'if.cont' BasicBlock
                 BrInst->getParent()->setName(std::string(BI->getName()) + std::string(".if.cont"));
-                Builder.SetInsertPoint(BrInst);
-                Builder.CreateStore(
-                    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInst->getSuccessor(1)]), VAlloc);
+                // Builder.SetInsertPoint(BrInst);
+                // Builder.CreateStore(
+                //    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInst->getSuccessor(1)]), VAlloc);
+                insertOpaqueSwitchIndex(BrInst, BBMap[BrInst->getSuccessor(1)], VAlloc);
                 BBSkip.push_back(BrInst->getParent());
+                Builder.SetInsertPoint(BrInst);
                 Builder.CreateBr(SwitchBB);
                 BrInst->eraseFromParent(); // Erase conditional branch
             } else {
-                Builder.SetInsertPoint(BrInst);
-                Builder.CreateStore(
-                    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInst->getSuccessor(0)]), VAlloc);
+                // Builder.SetInsertPoint(BrInst);
+                // Builder.CreateStore(
+                //    ConstantInt::get(Type::getInt32Ty(F.getContext()), BBMap[BrInst->getSuccessor(0)]), VAlloc);
+                insertOpaqueSwitchIndex(BrInst, BBMap[BrInst->getSuccessor(0)], VAlloc);
                 BrInst->setSuccessor(0, SwitchBB);
             }
         }
@@ -500,7 +507,7 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
 
         Builder.CreateStore(Builder.CreateAdd(Builder.CreateURem(Builder.CreateLoad(Type::getInt32Ty(M->getContext()),
                                                                      VTargetPtr, "part"),
-                                                  ConstantInt::get(Type::getInt32Ty(M->getContext()), 7), "total"),
+                                                  ConstantInt::get(Type::getInt32Ty(M->getContext()), 11), "total"),
                                 ConstantInt::get(Type::getInt32Ty(M->getContext()), quotient * 10), "target_low"),
             destination);
 
@@ -588,7 +595,8 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
         break;
     }
     default: {
-        errs() << "error: default case reached." << "\n";
+        errs() << "error: default case reached."
+               << "\n";
         break;
     }
     }
