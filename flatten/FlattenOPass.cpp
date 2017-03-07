@@ -80,23 +80,6 @@ struct FlattenO : public FunctionPass {
             FunctionType* FunTy = FunctionType::get(Type::getVoidTy(F.getContext()), ArgsTy, false);
             Function::Create(FunTy, Function::ExternalLinkage, "permute", Mod);
 
-// Debug
-#if DEBUG
-            Mod->getOrInsertGlobal("sum", Type::getInt32Ty(F.getContext()));
-            GlobalVariable* GSum = Mod->getNamedGlobal("sum");
-            GSum->setLinkage(Function::LinkageTypes::ExternalLinkage); // track sum in external module
-
-            std::vector<Type*> ArgsTy1;
-
-            ArgsTy1.push_back(Type::getInt32PtrTy(F.getContext())); // sum
-            ArgsTy1.push_back(Type::getInt32Ty(F.getContext()));    // target
-            ArgsTy1.push_back(Type::getInt32Ty(F.getContext()));    // swich case
-            ArgsTy1.push_back(Type::getInt32Ty(F.getContext()));    // val
-
-            FunctionType* FunTy1 = FunctionType::get(Type::getVoidTy(F.getContext()), ArgsTy1, false);
-            Function::Create(FunTy1, Function::ExternalLinkage, "debug", Mod);
-#endif
-
             Init = true;
         }
 
@@ -286,25 +269,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
                << "\n";
     }
 
-    std::vector<Type*> ArgsTy1;
-
-    ArgsTy1.push_back(Type::getInt32PtrTy(M->getContext())); // sum
-    ArgsTy1.push_back(Type::getInt32Ty(M->getContext()));    // target
-    ArgsTy1.push_back(Type::getInt32Ty(M->getContext()));    // swich case
-    ArgsTy1.push_back(Type::getInt32Ty(M->getContext()));    // val
-
-    FunctionType* FunTy1 = FunctionType::get(Type::getVoidTy(M->getContext()), ArgsTy1, false);
-    Constant* Const1 = M->getOrInsertFunction("debug", FunTy1);
-
-    Function* FDebug = dyn_cast<Function>(Const1);
-
-    if(!FPermute) {
-        errs() << "Could not find prototype for debug() function."
-               << "\n";
-    }
-
-    GlobalVariable* GSum = M->getNamedGlobal("sum");
-
     IRBuilder<> Builder(insertBefore);
 
     // Permute array of values
@@ -342,16 +306,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
 
         Builder.CreateStore(VTarget, destination);
 
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 0));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
-
         break;
     }
     case 1: {
@@ -386,16 +340,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
             VTargetLow, ConstantInt::get(Type::getInt32Ty(M->getContext()), quotient * 10), "target_val");
 
         Builder.CreateStore(VTarget, destination);
-
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 1));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
 
         break;
     }
@@ -432,16 +376,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
 
         Builder.CreateStore(VTarget, destination);
 
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 2));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
-
         break;
     }
     case 3: {
@@ -476,16 +410,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
             VTargetLow, ConstantInt::get(Type::getInt32Ty(M->getContext()), quotient * 10), "target_val");
 
         Builder.CreateStore(VTarget, destination);
-
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 3));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
 
         break;
     }
@@ -537,16 +461,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
 
         Builder.CreateStore(VTarget, destination);
 
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 4));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
-
         break;
     }
     case 5: {
@@ -581,16 +495,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
             VTargetLow, ConstantInt::get(Type::getInt32Ty(M->getContext()), quotient * 10), "target_val");
 
         Builder.CreateStore(VTarget, destination);
-
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 5));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
 
         break;
     }
@@ -627,16 +531,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
 
         Builder.CreateStore(VTarget, destination);
 
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 6));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
-
         break;
     }
     case 7: {
@@ -657,16 +551,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
             ConstantInt::get(Type::getInt32Ty(M->getContext()), quotient * 10), "target_val");
 
         Builder.CreateStore(VTarget, destination);
-
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 7));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
 
         break;
     }
@@ -718,16 +602,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
 
         Builder.CreateStore(VTarget, destination);
 
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 8));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
-
         break;
     }
     case 9: {
@@ -762,16 +636,6 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction* insertBefore, int target, Va
             VTargetLow, ConstantInt::get(Type::getInt32Ty(M->getContext()), quotient * 10), "target_val");
 
         Builder.CreateStore(VTarget, destination);
-
-#if DEBUG
-        std::vector<Value*> Args1;
-        Args1.push_back(GSum);
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), target));
-        Args1.push_back(ConstantInt::get(Type::getInt32Ty(M->getContext()), 9));
-        Args1.push_back(VTarget);
-
-        Builder.CreateCall(FDebug, Args1);
-#endif
 
         break;
     }
