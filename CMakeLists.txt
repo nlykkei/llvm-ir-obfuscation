@@ -12,3 +12,4 @@ link_directories(${LLVM_LIBRARY_DIRS})
 add_subdirectory(flatten)  # Use your pass name here.
 add_subdirectory(merge)
 add_subdirectory(add)
+add_subdirectory(cyclomatic)
