@@ -13,3 +13,5 @@ add_subdirectory(flatten)  # Use your pass name here.
 add_subdirectory(merge)
 add_subdirectory(add)
 add_subdirectory(cyclomatic)
+add_subdirectory(ipred)
+

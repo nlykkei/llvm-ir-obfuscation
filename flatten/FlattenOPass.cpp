@@ -6,6 +6,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #include <algorithm>
@@ -14,8 +16,6 @@
 #include <map>
 #include <string>
 #include <vector>
-
-#define DEBUG 0
 
 using namespace llvm;
 
@@ -30,6 +30,10 @@ namespace {
 
         void insertOpaqueSwitchIndex(Instruction *insertBefore, int target, Value *destination);
 
+        void removePhiNodes(Function &F);
+
+        void getAnalysisUsage(AnalysisUsage &Info) const;
+
         FlattenO()
                 : ModulePass(ID) {
         }
@@ -37,6 +41,11 @@ namespace {
         virtual bool runOnModule(Module &M) {
             std::map<BasicBlock *, int> BBMap; // Mapping between BasicBlocks and their unique IDs
             std::vector<BasicBlock *> BBSkip;  // BasicBlocks whose branch instructions are left unmodified
+
+            // Remove phi nodes
+            for (Function& F : M) {
+                removePhiNodes(F);
+            }
 
             // Insert global array and initialize it
             ArrayType *ArrayTy_0 = ArrayType::get(IntegerType::get(M.getContext(), 32), 10);
@@ -216,6 +225,10 @@ namespace {
 
 char FlattenO::ID = 0;
 static RegisterPass<FlattenO> X("flattenO", "Flattens the CFG by means of switching", false, false);
+
+void FlattenO::getAnalysisUsage(AnalysisUsage &AU) const {
+    //AU.addRequired<>();
+}
 
 /// Assign unique ID's to all BasicBlock's in Function 'F'
 void FlattenO::assignIDToBasicBlocks(Function &F, std::map<BasicBlock *, int> &BBMap) {
@@ -671,5 +684,33 @@ void FlattenO::insertOpaqueSwitchIndex(Instruction *insertBefore, int target, Va
                    << "\n";
             break;
         }
+    }
+}
+
+void FlattenO::removePhiNodes(Function &F) {
+
+    if (F.isDeclaration()) {
+        return;
+    }
+
+    BasicBlock* BBEntry = &F.getEntryBlock();
+    BasicBlock::iterator BI = BBEntry->begin();
+    while(isa<AllocaInst>(*BI)) {
+        ++BI;
+    }
+
+    Instruction* AllocaInsertPoint = &*BI;
+
+    std::list<Instruction*> WorkList;
+    for (BasicBlock &BI : F) {
+        for (BasicBlock::iterator II = BI.begin(), IE = BI.end(); II != IE; ++IE) {
+            if (isa<PHINode>(*II)) {
+                WorkList.push_back(&*II);
+            }
+        }
+    }
+    for (Instruction* I : WorkList) {
+        DemotePHIToStack(cast<PHINode>(I), AllocaInsertPoint);
+        errs() << "Removed phi node" << "\n";
     }
 }
