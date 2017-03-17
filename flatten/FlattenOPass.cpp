@@ -693,6 +693,7 @@ void FlattenO::removePhiNodes(Function &F) {
         return;
     }
 
+    // The 'entry' block has no phi nodes
     BasicBlock* BBEntry = &F.getEntryBlock();
     BasicBlock::iterator BI = BBEntry->begin();
     while(isa<AllocaInst>(*BI)) {
@@ -710,7 +711,7 @@ void FlattenO::removePhiNodes(Function &F) {
         }
     }
     for (Instruction* I : WorkList) {
+        errs() << "Removed phi node: " << I->getName() << "\n";
         DemotePHIToStack(cast<PHINode>(I), AllocaInsertPoint);
-        errs() << "Removed phi node" << "\n";
     }
 }
