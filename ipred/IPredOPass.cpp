@@ -71,13 +71,17 @@ namespace {
     struct IPredO : public ModulePass {
         static char ID;
 
-        IPredO() : ModulePass(ID) {}
+        IPredO() : ModulePass(ID) {
+            srand(time(NULL));
+        }
 
         bool obfuscateCFG(Function &F);
 
-        void insertIPred(BasicBlock *BB);
+        bool insertIPred(BasicBlock *BB);
 
         Value *insertIPredBefore(Instruction *I);
+
+        void updateGlobalVariable(BasicBlock *BB);
 
         BasicBlock *createModifiedBasicBlock(BasicBlock *BB);
 
@@ -143,11 +147,12 @@ bool IPredO::obfuscateCFG(Function &F) {
             int p = rand() % 100 + 1;
             if (ObfProbRate >= p) {
                 DEBUG_WITH_TYPE("opt", errs() << "Obfuscating BasicBlock: " << BB->getName() << "\n");
-                insertIPred(BB);
-                ModifedNumBasicBlocks += 1;
-                AddedNumBasicBlocks += 3;
-                FinalNumBasicBlocks += 3;
-                modified = true;
+                if (insertIPred(BB)) {
+                    ModifedNumBasicBlocks += 1;
+                    AddedNumBasicBlocks += 3;
+                    FinalNumBasicBlocks += 3;
+                    modified = true;
+                }
             } else {
                 DEBUG_WITH_TYPE("opt", errs() << "Skipping: " << BB->getName() << "\n");
             }
@@ -162,13 +167,12 @@ bool IPredO::obfuscateCFG(Function &F) {
     return modified;
 }
 
-void IPredO::insertIPred(BasicBlock *BB) {
+bool IPredO::insertIPred(BasicBlock *BB) {
     Value *LHS, *RHS;
     Instruction *SplitPoint = BB->getFirstNonPHIOrDbgOrLifetime();
 
     if (SplitPoint == BB->getTerminator()) {
-        // Split BasicBlock at point before terminator
-        SplitPoint = BB->end()->getPrevNode();
+        return false;
     }
 
     // The 'original' BasicBlock contains every instruction, except phi nodes and metadata
@@ -177,23 +181,9 @@ void IPredO::insertIPred(BasicBlock *BB) {
     // Create a 'modified' BasicBlock based on the 'original' BasicBlock (control will never reach this block)
     BasicBlock *modifiedBB = createModifiedBasicBlock(orgBBStart);
 
-    // Initialize global variable 'x'
-    Function *F = BB->getModule()->getFunction("rand");
-
-    if (!F) {
-        BB->getContext().emitError("Could not find function in module.");
-        exit(1);
-    }
-
-    GlobalVariable *GVar = BB->getModule()->getNamedGlobal("x");
-
-    if (!GVar) {
-        BB->getContext().emitError("Could not find global variable in module.");
-        exit(1);
-    }
-
-    IRBuilder<> Builder(&BB->back());
-    Builder.CreateStore(Builder.CreateURem(Builder.CreateCall(F), ConstantInt::get(Type::getInt32Ty(BB->getContext()), 100)), GVar);
+    // Modify global variable 'x' to obfuscate control flow
+    updateGlobalVariable(BB);
+    updateGlobalVariable(orgBBStart);
 
     // Create invariant predicate that always evaluates to true
     LHS = insertIPredBefore(&BB->back());
@@ -217,6 +207,7 @@ void IPredO::insertIPred(BasicBlock *BB) {
     CmpInst *Cond2 = new ICmpInst(&orgBBStart->back(), ICmpInst::ICMP_NE, LHS, RHS, "cond2");
     orgBBStart->getTerminator()->eraseFromParent();
     BranchInst::Create(orgBBEnd, modifiedBB, Cond2, orgBBStart);
+    return true;
 }
 
 char IPredO::ID = 0;
@@ -269,12 +260,69 @@ Value *IPredO::insertIPredBefore(Instruction *I) {
     }
 
     IRBuilder<> Builder(I);
-    Value *V = Builder.CreateLoad(Type::getInt32Ty(I->getContext()), GVar); // GVar has type i32*
+    Value *V = Builder.CreateURem(Builder.CreateLoad(Type::getInt32Ty(I->getContext()), GVar),
+                                  ConstantInt::get(Type::getInt32Ty(I->getContext()), 19)); // GVar has type i32*
+
     Value *Res = Builder.CreateURem(Builder.CreateAdd(
             Builder.CreateMul(ConstantInt::get(Type::getInt32Ty(I->getContext()), 4), Builder.CreateMul(V, V)),
             ConstantInt::get(Type::getInt32Ty(I->getContext()), 4)),
                                     ConstantInt::get(Type::getInt32Ty(I->getContext()), 19));
     return Res;
+}
+
+void IPredO::updateGlobalVariable(BasicBlock *BB) {
+    Function *F = BB->getModule()->getFunction("rand");
+
+    if (!F) {
+        BB->getContext().emitError("Could not find function in module.");
+        exit(1);
+    }
+
+    GlobalVariable *GVar = BB->getModule()->getNamedGlobal("x");
+
+    if (!GVar) {
+        BB->getContext().emitError("Could not find global variable in module.");
+        exit(1);
+    }
+
+    IRBuilder<> Builder(&BB->back());
+
+    switch (rand() % 7) {
+        case 0:
+            Builder.CreateStore(Builder.CreateURem(Builder.CreateCall(F),
+                                                   ConstantInt::get(Type::getInt32Ty(BB->getContext()), 10)), GVar);
+            break;
+        case 1:
+            Builder.CreateStore(Builder.CreateAdd(Builder.CreateLoad(Type::getInt32Ty(BB->getContext()), GVar),
+                                                  ConstantInt::get(Type::getInt32Ty(BB->getContext()), rand() % 10)),
+                                GVar);
+            break;
+        case 2:
+            Builder.CreateStore(Builder.CreateSub(Builder.CreateLoad(Type::getInt32Ty(BB->getContext()), GVar),
+                                                  ConstantInt::get(Type::getInt32Ty(BB->getContext()), rand() % 10)),
+                                GVar);
+            break;
+        case 3:
+            Builder.CreateStore(Builder.CreateMul(Builder.CreateLoad(Type::getInt32Ty(BB->getContext()), GVar),
+                                                  ConstantInt::get(Type::getInt32Ty(BB->getContext()), rand() % 10)),
+                                GVar);
+            break;
+        case 4:
+            Builder.CreateStore(Builder.CreateShl(Builder.CreateLoad(Type::getInt32Ty(BB->getContext()), GVar),
+                                                  ConstantInt::get(Type::getInt32Ty(BB->getContext()),
+                                                                   (rand() % 3) + 1)),
+                                GVar);
+            break;
+        case 5:
+            Builder.CreateStore(Builder.CreateXor(Builder.CreateLoad(Type::getInt32Ty(BB->getContext()), GVar),
+                                                  ConstantInt::get(Type::getInt32Ty(BB->getContext()), rand() % 10)),
+                                GVar);
+        case 6:
+            // Do nothing
+            break;
+        default:
+            break;
+    }
 }
 
 static RegisterPass<IPredO> X("ipredO", "Obfuscates CFG by inserting invariant predicates.", false,
