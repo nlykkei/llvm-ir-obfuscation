@@ -79,7 +79,7 @@ namespace {
 
         bool insertIPred(BasicBlock *BB);
 
-        Value *insertIPredBefore(Instruction *I);
+        Value *insertIPredAndCondBefore(Instruction *I, bool Negate);
 
         void updateGlobalVariable(BasicBlock *BB);
 
@@ -168,7 +168,8 @@ bool IPredO::obfuscateCFG(Function &F) {
 }
 
 bool IPredO::insertIPred(BasicBlock *BB) {
-    Value *LHS, *RHS;
+    Value* CmpRes;
+    bool Negate;
     Instruction *SplitPoint = BB->getFirstNonPHIOrDbgOrLifetime();
 
     if (SplitPoint == BB->getTerminator()) {
@@ -185,28 +186,35 @@ bool IPredO::insertIPred(BasicBlock *BB) {
     updateGlobalVariable(BB);
     updateGlobalVariable(orgBBStart);
 
-    // Create invariant predicate that always evaluates to true
-    LHS = insertIPredBefore(&BB->back());
-    RHS = ConstantInt::get(Type::getInt32Ty(BB->getContext()), 0);
-    CmpInst *Cond1 = new ICmpInst(&BB->back(), CmpInst::ICMP_NE, LHS, RHS, "cond1");
+    // Create invariant predicate with associated condition
+    Negate = rand() & 0x01;
+    CmpRes = insertIPredAndCondBefore(&BB->back(), Negate);
 
     // Erase old terminators to insert new ones
     BB->getTerminator()->eraseFromParent();
     modifiedBB->getTerminator()->eraseFromParent();
 
     // Branch to 'original' BasicBlock
-    BranchInst::Create(orgBBStart, modifiedBB, Cond1, BB);
+    if (!Negate) {
+        BranchInst::Create(orgBBStart, modifiedBB, CmpRes, BB);
+    } else {
+        BranchInst::Create(modifiedBB, orgBBStart, CmpRes, BB);
+    }
 
     // The 'modified' BasicBlock branch to 'original' BasicBlock
     BranchInst::Create(orgBBStart, modifiedBB);
 
     // The 'original' BasicBlock may branch to 'modified' BasicBlock (control will never flow on this edge)
     BasicBlock *orgBBEnd = orgBBStart->splitBasicBlock(--orgBBStart->end(), "orgBBEnd");
-    LHS = insertIPredBefore(&orgBBStart->back());
-    RHS = ConstantInt::get(Type::getInt32Ty(BB->getContext()), 0);
-    CmpInst *Cond2 = new ICmpInst(&orgBBStart->back(), ICmpInst::ICMP_NE, LHS, RHS, "cond2");
+    Negate = rand() & 0x01;
+    CmpRes = insertIPredAndCondBefore(&orgBBStart->back(), Negate);
     orgBBStart->getTerminator()->eraseFromParent();
-    BranchInst::Create(orgBBEnd, modifiedBB, Cond2, orgBBStart);
+
+    if (!Negate) {
+        BranchInst::Create(orgBBEnd, modifiedBB, CmpRes, orgBBStart);
+    } else {
+        BranchInst::Create(modifiedBB, orgBBEnd, CmpRes, orgBBStart);
+    }
     return true;
 }
 
@@ -245,13 +253,17 @@ BasicBlock *IPredO::createModifiedBasicBlock(BasicBlock *BB) {
     }
 
     IRBuilder<> Builder(&*It);
+    // Increment global variable 'x' to look like a loop
     Builder.CreateStore(Builder.CreateAdd(Builder.CreateLoad(Type::getInt32Ty(BB->getContext()), GVar),
                                           ConstantInt::get(Type::getInt32Ty(BB->getContext()), 1)), GVar);
 
     return modifiedBB;
 }
 
-Value *IPredO::insertIPredBefore(Instruction *I) {
+
+
+Value *IPredO::insertIPredAndCondBefore(Instruction *I, bool Negate) {
+    Value *V, *LHS, *RHS, *Res;
     GlobalVariable *GVar = I->getModule()->getNamedGlobal("x"); // Wrapper around getGlobalVariable("x", true)
 
     if (!GVar) {
@@ -260,13 +272,54 @@ Value *IPredO::insertIPredBefore(Instruction *I) {
     }
 
     IRBuilder<> Builder(I);
-    Value *V = Builder.CreateURem(Builder.CreateLoad(Type::getInt32Ty(I->getContext()), GVar),
-                                  ConstantInt::get(Type::getInt32Ty(I->getContext()), 19)); // GVar has type i32*
 
-    Value *Res = Builder.CreateURem(Builder.CreateAdd(
-            Builder.CreateMul(ConstantInt::get(Type::getInt32Ty(I->getContext()), 4), Builder.CreateMul(V, V)),
-            ConstantInt::get(Type::getInt32Ty(I->getContext()), 4)),
-                                    ConstantInt::get(Type::getInt32Ty(I->getContext()), 19));
+    switch (rand() % 3) {
+        case 0:
+            V = Builder.CreateURem(Builder.CreateLoad(Type::getInt32Ty(I->getContext()), GVar),
+                                   ConstantInt::get(Type::getInt32Ty(I->getContext()),
+                                                    19)); // GVar has type i32*
+
+            LHS = Builder.CreateURem(Builder.CreateAdd(
+                    Builder.CreateMul(ConstantInt::get(Type::getInt32Ty(I->getContext()), 4), Builder.CreateMul(V, V)),
+                    ConstantInt::get(Type::getInt32Ty(I->getContext()), 4)),
+                                     ConstantInt::get(Type::getInt32Ty(I->getContext()), 19));
+
+            RHS = ConstantInt::get(Type::getInt32Ty(I->getContext()), 0);
+            break;
+        case 1:
+            V = Builder.CreateURem(Builder.CreateLoad(Type::getInt32Ty(I->getContext()), GVar),
+                                   ConstantInt::get(Type::getInt32Ty(I->getContext()),
+                                                    11)); // GVar has type i32*
+
+            LHS = Builder.CreateURem(Builder.CreateAdd(Builder.CreateAdd(
+                    Builder.CreateMul(V, V),
+                    Builder.CreateMul(ConstantInt::get(Type::getInt32Ty(I->getContext()), 4),V)), ConstantInt::get(Type::getInt32Ty(I->getContext()), 5)),
+                                     ConstantInt::get(Type::getInt32Ty(I->getContext()), 11));
+
+            RHS = ConstantInt::get(Type::getInt32Ty(I->getContext()), 0);
+            break;
+        case 2:
+            V = Builder.CreateURem(Builder.CreateLoad(Type::getInt32Ty(I->getContext()), GVar),
+                                   ConstantInt::get(Type::getInt32Ty(I->getContext()),
+                                                    31)); // GVar has type i32*
+
+            LHS = Builder.CreateURem(Builder.CreateAdd(Builder.CreateAdd(
+                    Builder.CreateMul(ConstantInt::get(Type::getInt32Ty(I->getContext()), 5), Builder.CreateMul(V, V)),
+                    Builder.CreateMul(ConstantInt::get(Type::getInt32Ty(I->getContext()), 6),V)), ConstantInt::get(Type::getInt32Ty(I->getContext()), 2)),
+                                     ConstantInt::get(Type::getInt32Ty(I->getContext()), 31));
+
+            RHS = ConstantInt::get(Type::getInt32Ty(I->getContext()), 0);
+            break;
+        default:
+            break;
+    }
+
+    if (!Negate) {
+        Res = Builder.CreateICmp(CmpInst::ICMP_NE, LHS, RHS);
+    } else {
+        Res = Builder.CreateICmp(CmpInst::ICMP_EQ, LHS, RHS);
+    }
+
     return Res;
 }
 
