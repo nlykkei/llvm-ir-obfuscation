@@ -10,7 +10,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
 add_subdirectory(flatten)  # Use your pass name here.
-add_subdirectory(merge)
+add_subdirectory(checker)
 add_subdirectory(add)
 add_subdirectory(cyclomatic)
 add_subdirectory(ipred)
