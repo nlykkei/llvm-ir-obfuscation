@@ -24,7 +24,7 @@
 using namespace llvm;
 
 static std::string defaultCheckBB = "entry";
-static int defaultCVal = 0xFF;
+static int defaultCVal = 0x00;
 
 static cl::opt<std::string> CheckBB("checkbb",
                                   cl::desc("Basic block that should be checked"),
@@ -96,7 +96,7 @@ bool CheckerT::insertCorrectorSlot(BasicBlock *BB) {
 
     DEBUG(errs() << "Inserting corrector slot into: " << BB->getName());
 
-    IRBuilder<> Builder(BB->getFirstNonPHI());
+    IRBuilder<> Builder(&*BB->getFirstInsertionPt());
     Builder.CreateCall(InlineAsm::get(VoidFunTy, ".cstart:", "", true));
     Builder.CreateCall(InlineAsm::get(VoidFunTy, "jmp .end", "", true));
     Builder.CreateCall(InlineAsm::get(VoidFunTy, ".cslot:", "", true));
