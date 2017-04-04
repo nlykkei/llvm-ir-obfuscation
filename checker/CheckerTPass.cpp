@@ -120,7 +120,6 @@ bool CheckerT::insertCheckerBefore(BasicBlock *BB) {
     BasicBlock *Checker = BasicBlock::Create(BB->getContext(), "checker", BB->getParent(), BB);
 
     IRBuilder<> Builder(Checker);
-    Value *VAlloc = Builder.CreateAlloca(Type::getInt32Ty(BB->getContext()));
     Builder.CreateCall(InlineAsm::get(FunTy, "pushq %rax", "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, "pushq %rbx", "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, "pushq %rsi", "", true));
