@@ -29,7 +29,7 @@ fi
 program=$1 # llvm bytecode program
 basic_block=$2 # basic block
 
-checked=$(basename "$program" ".ll")\-check.ll
+checked=$(basename "$program" ".ll")\_c.ll
 
 opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked}
 
