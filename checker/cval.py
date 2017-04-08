@@ -4,11 +4,11 @@ import sys
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage:", sys.argv[0], "start_label", "end_label")  
+        print("Usage: ./{program} start_label end_label".format(program=sys.argv[0])) 
         exit(1)
         
-    for arg in sys.argv:
-        print(arg)
+#    for arg in sys.argv:
+#        print(arg)
 
     start_label = "<" + sys.argv[1] + ">:"
     end_label = "<" + sys.argv[2] + ">:"
@@ -32,10 +32,10 @@ def main():
             try:
                 val = int(token, 16)
                 cval = cval ^ val
-                print(token, end=' ')
+#                print(token, end=' ')
             except ValueError:
                 break # x86 mnemonic
-        print()
+#        print()
             
     sys.exit(cval) 
 

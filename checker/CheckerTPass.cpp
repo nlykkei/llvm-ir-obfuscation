@@ -27,12 +27,12 @@ static std::string defaultCheckBB = "entry";
 static int defaultCVal = 0x00;
 
 static cl::opt<std::string> CheckBB("checkbb",
-                                  cl::desc("Basic block that should be checked"),
-                                  cl::value_desc("Basic block identifier"), cl::init(defaultCheckBB), cl::Optional);
+                                    cl::desc("Basic block that should be checked"),
+                                    cl::value_desc("Basic block identifier"), cl::init(defaultCheckBB), cl::Optional);
 
 static cl::opt<int> CVal("cval",
-                                    cl::desc("Value to be filled into corrector slot"),
-                                    cl::value_desc("Corrector slot value"), cl::init(defaultCVal), cl::Optional);
+                         cl::desc("Value to be filled into corrector slot"),
+                         cl::value_desc("Corrector slot value"), cl::init(defaultCVal), cl::Optional);
 
 namespace {
     struct CheckerT : public ModulePass {
@@ -143,9 +143,9 @@ bool CheckerT::insertCheckerBefore(BasicBlock *BB) {
     for (BasicBlock *Pred : predecessors(BB)) { // 'Checker' is not a user of 'entry'
         TerminatorInst *TI = Pred->getTerminator();
         for (int i = 0; i < TI->getNumSuccessors(); ++i)
-        if (TI->getSuccessor(i) == BB) {
-            TI->setSuccessor(i, Checker);
-        }
+            if (TI->getSuccessor(i) == BB) {
+                TI->setSuccessor(i, Checker);
+            }
     }
 
     Builder.CreateBr(BB);
