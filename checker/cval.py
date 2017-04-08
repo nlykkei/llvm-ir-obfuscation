@@ -27,15 +27,14 @@ def main():
         if end_label in tokens:
             break
         for token in tokens:
-            if len(token) > 2:
-                break # x86 mnemonic (bytes in hex)
+            if len(token) != 2: # bytes in hex
+                break
             try:
                 val = int(token, 16)
                 cval = cval ^ val
                 print(token, end=' ')
             except ValueError:
                 break # x86 mnemonic
-        print()
             
     sys.exit(cval) 
 

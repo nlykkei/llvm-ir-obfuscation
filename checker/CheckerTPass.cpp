@@ -24,15 +24,20 @@
 using namespace llvm;
 
 static std::string defaultCheckBB = "entry";
+static std::string defaultCheckId = "checker";
 static int defaultCVal = 0x00;
 
 static cl::opt<std::string> CheckBB("checkbb",
-                                  cl::desc("Basic block that should be checked"),
-                                  cl::value_desc("Basic block identifier"), cl::init(defaultCheckBB), cl::Optional);
+                                    cl::desc("Basic block that should be checked"),
+                                    cl::value_desc("Basic block identifier"), cl::init(defaultCheckBB), cl::Optional);
+
+static cl::opt<std::string> CheckId("checkid",
+                            cl::desc("Identifer of inserted checker"),
+                            cl::value_desc("Checker identifier"), cl::init(defaultCheckId), cl::Optional);
 
 static cl::opt<int> CVal("cval",
-                                    cl::desc("Value to be filled into corrector slot"),
-                                    cl::value_desc("Corrector slot value"), cl::init(defaultCVal), cl::Optional);
+                         cl::desc("Value to be filled into corrector slot"),
+                         cl::value_desc("Corrector slot value"), cl::init(defaultCVal), cl::Optional);
 
 namespace {
     struct CheckerT : public ModulePass {
@@ -40,7 +45,7 @@ namespace {
 
         CheckerT() : ModulePass(ID) {}
 
-        bool insertCheckerBefore(BasicBlock *BB);
+        BasicBlock *insertCheckerBefore(BasicBlock *BB);
 
         bool insertCorrectorSlot(BasicBlock *BB);
 
@@ -68,7 +73,7 @@ namespace {
                         insertCorrectorSlot(&BB);
 
                         // Insert checker before basic block that dominates all uses
-                        insertCheckerBefore(&BB);
+                        BasicBlock *Checker = insertCheckerBefore(&BB);
 
                         DEBUG(errs() << "Inserted checker for basic block \'" << CheckBB << "\'." << "\n");
                         DEBUG(F.viewCFG());
@@ -113,19 +118,19 @@ bool CheckerT::insertCorrectorSlot(BasicBlock *BB) {
     return true;
 }
 
-bool CheckerT::insertCheckerBefore(BasicBlock *BB) {
+BasicBlock *CheckerT::insertCheckerBefore(BasicBlock *BB) {
     std::vector<Type *> ArgsTy;
     FunctionType *FunTy = FunctionType::get(Type::getVoidTy(BB->getContext()), ArgsTy, false);
 
-    BasicBlock *Checker = BasicBlock::Create(BB->getContext(), "checker", BB->getParent(), BB);
+    BasicBlock *Checker = BasicBlock::Create(BB->getContext(), CheckId, BB->getParent(), BB);
 
     IRBuilder<> Builder(Checker);
     Builder.CreateCall(InlineAsm::get(FunTy, "pushq %rax", "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, "pushq %rbx", "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, "pushq %rsi", "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, "xorq %rax, %rax", "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, "movq $$.cstart, %rsi", "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, ".cloop:", "", true));
+    Builder.CreateCall(InlineAsm::get(FunTy, "movq .cstart, %rsi", "", true));
+    Builder.CreateCall(InlineAsm::get(FunTy, "$$.cloop:", "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, "movzbq (%rsi), %rbx", "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, "xorq %rbx, %rax", "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, "inc %rsi", "", true));
@@ -143,12 +148,13 @@ bool CheckerT::insertCheckerBefore(BasicBlock *BB) {
     for (BasicBlock *Pred : predecessors(BB)) { // 'Checker' is not a user of 'entry'
         TerminatorInst *TI = Pred->getTerminator();
         for (int i = 0; i < TI->getNumSuccessors(); ++i)
-        if (TI->getSuccessor(i) == BB) {
-            TI->setSuccessor(i, Checker);
-        }
+            if (TI->getSuccessor(i) == BB) {
+                TI->setSuccessor(i, Checker);
+            }
     }
 
     Builder.CreateBr(BB);
+    return Checker;
 }
 
 static RegisterPass<CheckerT> X("checkerT", "Inserts checkers before basic blocks for tamper proofing", false, false);
