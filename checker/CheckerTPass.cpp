@@ -35,6 +35,7 @@ static cl::opt<std::string> CheckId("checkid",
                             cl::desc("Identifer of inserted checker"),
                             cl::value_desc("Checker identifier"), cl::init(defaultCheckId), cl::Optional);
 
+
 static cl::opt<int> CVal("cval",
                          cl::desc("Value to be filled into corrector slot"),
                          cl::value_desc("Corrector slot value"), cl::init(defaultCVal), cl::Optional);
