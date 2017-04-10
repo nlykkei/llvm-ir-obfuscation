@@ -33,17 +33,26 @@ base=$(basename "$program" ".ll")
 checked=${base}\_c.ll
 assembly=${base}\_c.s
 binary=${base}\_c
+#checkid=`cat /proc/sys/kernel/random/uuid`
+checkid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block}
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkid=${checkid} -debug
 llc ${checked} -o ${assembly}
 clang ${assembly} -o ${binary}
-cval="$(objdump -d ${binary} | ./cval.py .cstart .cend; echo $?)"
 
-echo Corrector value: ${cval}
+cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkid\0 .cend_$checkid\0; echo $?)"
+cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkid\1 .cend_$checkid\1; echo $?)"
+#cval1=$(($cval0 ^ $cval1))
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -cval=${cval}
+echo "Corrector value for basic block: ${cval0}"
+echo "Corrector value for checker: ${cval1}"
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -cval0=${cval0} -cval1=${cval1} -checkid=${checkid} -debug
 llc ${checked} -o ${assembly}
 clang ${assembly} -o ${binary}
+
+
+
 
 
 
