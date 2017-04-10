@@ -25,7 +25,8 @@
 
 using namespace llvm;
 
-static std::string defaultCheckFn = nullptr;
+static std::string defaultCheckFn = "";
+static std::string defaultCheckBB = "";
 static std::string defaultCheckId = "checker";
 static int defaultCVal = 0x00;
 
@@ -63,56 +64,72 @@ namespace {
 
         virtual bool runOnModule(Module &M) {
 
-            DEBUG(errs() << "Searching for basic block \'" << CheckBB << "\' in " << (CheckFn == nullptr ? "any function" : CheckFn.c_str()) << "\n");
+            DEBUG(errs() << std::string(0, ' ') << "Searching for basic block \'" << CheckBB << "\' in "
+                         << (CheckFn.empty() ? "any function" : (std::string("function ") + CheckFn))  << " (" << M.getName() << ")" "\n");
 
-            DEBUG(errs() << "\tSearching functions in module \'" << M.getName() << "\'" << "\n");
+            DEBUG(errs() << std::string(2, ' ') << "Searching functions in module \'" << M.getName() << "\'" << "\n");
+
+            bool foundFunction = false;
 
             for (auto &F : M) {
 
-                DEBUG(errs() << "\t\tChecking function \'" << F.getName() << "\'" << "\n");
+                DEBUG(errs() << std::string(4, ' ') << "Checking function \'" << F.getName() << "\'" << "\n");
 
-                if (CheckFn == nullptr || CheckFn == F.getName()) {
+                if (CheckFn.empty() || CheckFn == F.getName()) {
 
-                    if (CheckFn != nullptr) {
-                        DEBUG(errs() << "\t\tFound function \'" << CheckFn << "\'" << "\n");
+                    if (!CheckFn.empty()) {
+                        DEBUG(errs() << std::string(4, ' ') << "Found function \'" << CheckFn << "\'" << "\n");
+                    } else {
+                        DEBUG(errs() << std::string(4, ' ') << "Function \'" << F.getName() << "\' match criteria <any>" << "\n");
                     }
 
-                    DEBUG(errs() << "\t\tSearching basic blocks in function \'" << F.getName() << "\'" << "\n");
+                    foundFunction = true;
+
+                    DEBUG(errs() << std::string(4, ' ') << "Searching basic blocks in function \'" << F.getName()
+                                 << "\'" << "\n");
 
                     for (auto &BB : F) {
 
-                        DEBUG(errs() << "\t\t\tChecking basic block \'" << BB.getName() << "\'" << "\n");
+                        DEBUG(errs() << std::string(6, ' ') << "Checking basic block \'" << BB.getName() << "\'"
+                                     << "\n");
 
                         if (!BB.getName().compare(CheckBB)) {
 
-                            DEBUG(errs() << "\t\t\tFound basic block \'" << BB.getName() << "\'" << "\n");
+                            DEBUG(errs() << std::string(6, ' ') << "Found basic block \'" << BB.getName() << "\'"
+                                         << "\n");
 
                             if (&F.getEntryBlock() == &BB) {
-                                DEBUG(errs() << "\t\t\tBasic block is entry point of function." << "\n");
+                                DEBUG(errs() << std::string(8, ' ') << "Basic block \'" << CheckBB << "\' is entry point of function."
+                                             << "\n");
+                                DEBUG(errs() << std::string(0 , ' ') << "Failed to insert checker for basic block \'" << CheckBB << "\'" << "\n");
                                 return false;
                             }
 
                             if (pred_empty(&BB)) {
-                                DEBUG(errs() << "\t\t\tBasic block has no predecessors." << "\n");
+                                DEBUG(errs() << std::string(8, ' ') << "Basic block \'" << CheckBB << "\' has no predecessors." << "\n");
+                                DEBUG(errs() << std::string(0 , ' ') << "Failed to insert checker for basic block \'" << CheckBB << "\'" << "\n");
                                 return false;
                             }
 
                             std::string Id0 = CheckId + std::to_string(0);
 
                             // Insert corrector slot into basic block
-                            DEBUG(errs() << "\t\t\tInserting corrector slot into basic block \'" << BB.getName() << "\'"
+                            DEBUG(errs() << std::string(8, ' ') << "Inserting corrector slot into basic block \'"
+                                         << BB.getName() << "\'"
                                          << "\n");
                             insertCorrectorSlot(&BB, Id0, CVal0);
 
                             // Insert checker before basic block that dominates all uses
-                            DEBUG(errs() << "\t\t\tInserting dominating checker \'" << Id0 << "\' for basic block \'"
+                            DEBUG(errs() << std::string(8, ' ') << "Inserting dominating checker \'" << Id0
+                                         << "\' for basic block \'"
                                          << BB.getName() << "\'" << "\n");
                             BasicBlock *Checker = insertCheckerBefore(&BB, Id0);
 
                             std::string Id1 = CheckId + std::to_string(1);
 
                             // Insert corrector slot into checker
-                            DEBUG(errs() << "\t\t\tInserting corrector slot into checker \'" << Id0 << "\'" << "\n");
+                            DEBUG(errs() << std::string(8, ' ') << "Inserting corrector slot into checker \'" << Id0
+                                         << "\'" << "\n");
                             insertCorrectorSlot(Checker, Id1, CVal1);
 
                             // Insert checker at random position into CFG to check inserted checker
@@ -122,20 +139,30 @@ namespace {
                             Function::iterator It = F.begin();
                             std::advance(It, randPos);
                             BasicBlock *InsertBB = &*It;
-                            DEBUG(errs() << "\t\t\tInserted checker \'" << Id1 << "\' for checker \'" << Id0
+                            DEBUG(errs() << std::string(8, ' ') << "Inserted checker \'" << Id1 << "\' for checker \'"
+                                         << Id0
                                          << "\' before basic block \'" << InsertBB->getName() << "\'" << "\n");
                             insertCheckerBefore(InsertBB, Id1);
 
+                            DEBUG(errs() << std::string(0 , ' ') << "Succeeded to insert checker for basic block \'" << CheckBB << "\'" << "\n");
+
                             DEBUG(F.viewCFG());
+
                             return true;
                         }
                     }
                 }
 
-                DEBUG(errs() << "\t\tCould not find basic block \'" << CheckBB << "\' in function \'" << F.getName() << "\'" << "\n");
+                DEBUG(errs() << std::string(4, ' ') << "Could not find basic block \'" << CheckBB << "\' in function \'"
+                             << F.getName() << "\'" << "\n");
             }
 
-            DEBUG(errs() << "Could not find basic block \'" << CheckBB << "\' in " << (CheckFn == nullptr ? "any function" : CheckFn.c_str()) << "\n");
+            if (!foundFunction && !CheckFn.empty()) {
+                DEBUG(errs() << std::string(2, ' ') << "Could not find function \'" << CheckFn << "\'"
+                             << " in module \'" << M.getName() << "\'" << "\n");
+            }
+
+            DEBUG(errs() << std::string(0 , ' ') << "Failed to insert checker for basic block \'" << CheckBB << "\'" << "\n");
 
             return false;
         }

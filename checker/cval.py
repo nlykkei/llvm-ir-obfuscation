@@ -33,7 +33,7 @@ def main():
                 val = int(token, 16)
                 cval = cval ^ val
 #                print(token, end=' ')
-            except ValueError:
+            except ValueError as e:
                 break # x86 mnemonic
 #        print()
 
