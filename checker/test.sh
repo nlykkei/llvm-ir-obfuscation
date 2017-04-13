@@ -121,6 +121,103 @@ if [ $res != 120 ]; then
     error
 fi
 
+# pow
+
+pow_t1_5="./pow_c 1 5"
+pow_t2_7="./pow_c 2 7"
+pow_t3_3="./pow_c 3 3"
+pow_t4_3="./pow_c 4 3"
+pow_t5_2="./pow_c 5 2"
+
+program="../programs/ll/pow.ll"
+base=$(basename "$program" ".ll")
+checked=${base}\_c.ll
+assembly=${base}\_c.s
+binary=${base}\_c
+
+# pow: if.then
+
+printf "[Testing] pow: if.else @ power\n"
+
+basic_block="if.else"
+fn="power"
+checkpid="c$(($RANDOM % 100))"
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
+cval0=$(echo $?)
+objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
+cval1=$(echo $?)
+
+objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
+objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+
+res=$($pow_t1_5; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $pow_t1_5 ($res)"
+    error
+fi
+
+res=$($pow_t2_7; echo $?)
+
+if [ $res != 128 ]; then
+    echo "Fail: $pow_t2_7 ($res)"
+    error
+fi
+
+res=$($pow_t4_3; echo $?)
+
+if [ $res != 64 ]; then
+    echo "Fail: $pow_t4_3 ($res)"
+    error
+fi
+
+# pow: if.then
+
+printf "[Testing] pow: if.then2 @ power\n"
+
+basic_block="if.then2"
+fn="power"
+checkpid="c$(($RANDOM % 100))"
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
+cval0=$(echo $?)
+objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
+cval1=$(echo $?)
+
+objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
+objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+
+res=$($pow_t1_5; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $pow_t1_5 ($res)"
+    error
+fi
+
+res=$($pow_t2_7; echo $?)
+
+if [ $res != 128 ]; then
+    echo "Fail: $pow_t2_7 ($res)"
+    error
+fi
+
+res=$($pow_t4_3; echo $?)
+
+if [ $res != 64 ]; then
+    echo "Fail: $pow_t4_3 ($res)"
+    error
+fi
+
+
 echo "[Success] All tests passed..."
 exit 0
 
