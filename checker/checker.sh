@@ -34,24 +34,33 @@ base=$(basename "$program" ".ll")
 checked=${base}\_c.ll
 assembly=${base}\_c.s
 binary=${base}\_c
-#checkid=`cat /proc/sys/kernel/random/uuid`
-checkid="c$(($RANDOM % 100))"
+#checkpid=`cat /proc/sys/kernel/random/uuid`
+checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkid=${checkid}
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
 llc ${checked} -o ${assembly}
 clang ${assembly} -o ${binary}
 
-cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkid\0 .cend_$checkid\0; echo $?)"
-cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkid\1 .cend_$checkid\1; echo $?)"
-#cval1=$(($cval0 ^ $cval1))
+objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
+cval0=$(echo $?)
+objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
+cval1=$(echo $?)
 
-echo "Corrector value for basic block: ${cval0}"
-echo "Corrector value for checker: ${cval1}"
+echo "[INFO] Corrector value for basic block: ${cval0}"
+echo "[INFO] Corrector value for checker: ${cval1}"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkid=${checkid} -debug
-llc ${checked} -o ${assembly}
-clang ${assembly} -o ${binary}
+objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
+cslot0=$(echo $?)
+objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+cslot1=$(echo $?)
 
+if [ $cslot0 != 0 ] || [ $cslot1 != 0 ]; then
+    echo "Failed to initialize corrector slots"
+    exit -1
+fi
+
+echo "[INFO] Success..."
+exit 0
 
 
 

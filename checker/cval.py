@@ -2,6 +2,7 @@
 
 import sys
 
+
 def main():
     if len(sys.argv) < 3:
         print("Usage: ./{program} start_label end_label".format(program=sys.argv[0])) 

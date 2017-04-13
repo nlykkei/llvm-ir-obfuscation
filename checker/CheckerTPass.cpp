@@ -27,8 +27,7 @@ using namespace llvm;
 
 static std::string defaultCheckFn = "";
 static std::string defaultCheckBB = "";
-static std::string defaultCheckId = "checker";
-static int defaultCVal = 0x00;
+static std::string defaultCheckPID = "checker";
 
 
 static cl::opt<std::string> CheckFn("checkfn",
@@ -39,18 +38,9 @@ static cl::opt<std::string> CheckBB("checkbb",
                                     cl::desc("Basic block that should be checked"),
                                     cl::value_desc("Basic block identifier"), cl::Required);
 
-static cl::opt<std::string> CheckId("checkid",
-                                    cl::desc("Identifer of inserted checker"),
-                                    cl::value_desc("Checker identifier"), cl::init(defaultCheckId), cl::Optional);
-
-
-static cl::opt<int> CVal0("cval0",
-                          cl::desc("Value to be filled into corrector slot for basic block"),
-                          cl::value_desc("Corrector slot value"), cl::init(defaultCVal), cl::Optional);
-
-static cl::opt<int> CVal1("cval1",
-                          cl::desc("Value to be filled into corrector slot for inserted checker"),
-                          cl::value_desc("Corrector slot value"), cl::init(defaultCVal), cl::Optional);
+static cl::opt<std::string> CheckPID("checkpid",
+                                    cl::desc("Identifer prefix of inserted checker"),
+                                    cl::value_desc("Checker identifier prefix"), cl::init(defaultCheckPID), cl::Optional);
 
 namespace {
     struct CheckerT : public ModulePass {
@@ -60,7 +50,7 @@ namespace {
 
         BasicBlock *insertCheckerBefore(BasicBlock *BB, std::string &Id);
 
-        bool insertCorrectorSlot(BasicBlock *BB, std::string &Id, int CVal);
+        bool insertCorrectorSlot(BasicBlock *BB, std::string &Id);
 
         virtual bool runOnModule(Module &M) {
 
@@ -111,13 +101,13 @@ namespace {
                                 return false;
                             }
 
-                            std::string Id0 = CheckId + std::to_string(0);
+                            std::string Id0 = CheckPID + std::to_string(0);
 
                             // Insert corrector slot into basic block
                             DEBUG(errs() << std::string(8, ' ') << "Inserting corrector slot into basic block \'"
                                          << BB.getName() << "\'"
                                          << "\n");
-                            insertCorrectorSlot(&BB, Id0, CVal0);
+                            insertCorrectorSlot(&BB, Id0);
 
                             // Insert checker before basic block that dominates all uses
                             DEBUG(errs() << std::string(8, ' ') << "Inserting dominating checker \'" << Id0
@@ -125,12 +115,12 @@ namespace {
                                          << BB.getName() << "\'" << "\n");
                             BasicBlock *Checker = insertCheckerBefore(&BB, Id0);
 
-                            std::string Id1 = CheckId + std::to_string(1);
+                            std::string Id1 = CheckPID + std::to_string(1);
 
                             // Insert corrector slot into checker
                             DEBUG(errs() << std::string(8, ' ') << "Inserting corrector slot into checker \'" << Id0
                                          << "\'" << "\n");
-                            insertCorrectorSlot(Checker, Id1, CVal1);
+                            insertCorrectorSlot(Checker, Id1);
 
                             // Insert checker at random position into CFG to check inserted checker
                             int numBasicBlocks = F.getBasicBlockList().size();
@@ -171,7 +161,7 @@ namespace {
 
 char CheckerT::ID = 0;
 
-bool CheckerT::insertCorrectorSlot(BasicBlock *BB, std::string &Id, int CVal) {
+bool CheckerT::insertCorrectorSlot(BasicBlock *BB, std::string &Id) {
     std::vector<Type *> ArgsTy;
     FunctionType *VoidFunTy = FunctionType::get(Type::getVoidTy(BB->getContext()), ArgsTy, false);
 
@@ -186,7 +176,7 @@ bool CheckerT::insertCorrectorSlot(BasicBlock *BB, std::string &Id, int CVal) {
     Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string(".cslot_") + Id + std::string(":"), "", true));
 
     std::vector<Value *> CArgs;
-    CArgs.push_back(ConstantInt::get(Type::getInt32Ty(BB->getContext()), CVal));
+    CArgs.push_back(ConstantInt::get(Type::getInt32Ty(BB->getContext()), 0x00));
     Builder.CreateCall(InlineAsm::get(IntFunTy, std::string(".byte ${0:c}"), "i", true), CArgs); // eliminate $
 
     Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string(".end_") + Id + std::string(":"), "", true));
