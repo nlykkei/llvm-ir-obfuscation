@@ -1,13 +1,13 @@
 /*
     Author: Nicolas Lykke Iversen (au341503@gmail.com)
 
-    Insert corrector slot into basic block with associated checker as predecessor dominating all uses:
-    - The checker computes the XOR of the basic block and compares the computed value to zero:
-    - If the comparison fails, the program prints an error message and enters an infinite loop.
-    - The corrector slots are filled in pre link-time.
-
-    TODO: Handle phi nodes
+    1) Insert corrector slot into basic block (chosen by the user) with associated dominating checker as predecessor.
+    2) The inserted checker is also checked by another checker inserted randomly within the CFG.
+    3) Each checker computes the XOR of the basic block and compares it to zero (stealth transformation)
+    4) If the comparison fails, the program crashes.
+    5) The values of the corrector slots are determined at post link-time.
 */
+
 
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
@@ -46,7 +46,9 @@ namespace {
     struct CheckerT : public ModulePass {
         static char ID;
 
-        CheckerT() : ModulePass(ID) {}
+        CheckerT() : ModulePass(ID) {
+            srand(time(NULL));
+        }
 
         BasicBlock *insertCheckerBefore(BasicBlock *BB, std::string &Id);
 
@@ -191,9 +193,17 @@ BasicBlock *CheckerT::insertCheckerBefore(BasicBlock *BB, std::string &Id) {
     std::vector<Type *> ArgsTy;
     FunctionType *FunTy = FunctionType::get(Type::getVoidTy(BB->getContext()), ArgsTy, false);
 
-    BasicBlock *Checker = BasicBlock::Create(BB->getContext(), Id, BB->getParent(), BB);
+    // Split basic block at first non PHI node
+    Instruction *SplitInst = BB->getFirstNonPHI();
+    BasicBlock *SplitBB = BB->splitBasicBlock(SplitInst, BB->getName()); // Contains all instructions after PHI nodes
 
-    IRBuilder<> Builder(Checker);
+    // Restore names
+    std::string Name = BB->getName();
+    BB->setName(Id);
+    SplitBB->setName(Name);
+
+    // Make 'BB' a checker of 'SplitBB' (unique predecessor)
+    IRBuilder<> Builder(&BB->back());
     Builder.CreateCall(
             InlineAsm::get(FunTy, std::string("subq $$") + std::to_string(RED_ZONE) + std::string(", %rsp"), "", true));
     Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rax"), "", true));
@@ -218,16 +228,7 @@ BasicBlock *CheckerT::insertCheckerBefore(BasicBlock *BB, std::string &Id) {
     Builder.CreateCall(
             InlineAsm::get(FunTy, std::string("addq $$") + std::to_string(RED_ZONE) + std::string(", %rsp"), "", true));
 
-    for (BasicBlock *Pred : predecessors(BB)) { // 'Checker' is not a user of 'entry'
-        TerminatorInst *TI = Pred->getTerminator();
-        for (int i = 0; i < TI->getNumSuccessors(); ++i)
-            if (TI->getSuccessor(i) == BB) {
-                TI->setSuccessor(i, Checker);
-            }
-    }
-
-    Builder.CreateBr(BB);
-    return Checker;
+    return BB;
 }
 
 static RegisterPass<CheckerT> X("checkerT", "Inserts checkers before basic blocks for tamper proofing", false, false);
