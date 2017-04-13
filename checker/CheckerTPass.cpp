@@ -27,7 +27,7 @@ using namespace llvm;
 
 static std::string defaultCheckFn = "";
 static std::string defaultCheckBB = "";
-static std::string defaultCheckPID = "checker";
+static std::string defaultCheckPID = "c";
 
 
 static cl::opt<std::string> CheckFn("checkfn",
