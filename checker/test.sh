@@ -90,8 +90,9 @@ printf "[Testing] fac: if.else @ fac\n"
 basic_block="if.else"
 fn="fac"
 checkpid="c$(($RANDOM % 100))"
+seed=$RANDOM
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid} -seed=${seed}
 llc ${checked} -o ${assembly}
 clang ${assembly} -o ${binary}
 
@@ -101,7 +102,7 @@ cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1;
 echo "Corrector value for basic block: ${cval0}"
 echo "Corrector value for checker: ${cval1}"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} #-debug
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
 llc ${checked} -o ${assembly}
 clang ${assembly} -o ${binary}
 
@@ -123,6 +124,108 @@ res=$($fac_t5; echo $?)
 
 if [ $res != 120 ]; then
     echo "Fail: $fac_t1 ($res)"
+    error
+fi
+
+# pow
+
+pow_t1_5="./pow_c 1 5"
+pow_t2_7="./pow_c 2 7"
+pow_t3_3="./pow_c 3 3"
+pow_t4_3="./pow_c 4 3"
+pow_t5_2="./pow_c 5 2"
+
+program="../programs/ll/pow.ll"
+base=$(basename "$program" ".ll")
+checked=${base}\_c.ll
+assembly=${base}\_c.s
+binary=${base}\_c
+
+# pow: if.then
+
+printf "[Testing] pow: if.else @ power\n"
+
+basic_block="if.else"
+fn="power"
+checkpid="c$(($RANDOM % 100))"
+seed=$RANDOM
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid} -seed=${seed}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0; echo $?)"
+cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1; echo $?)"
+
+echo "Corrector value for basic block: ${cval0}"
+echo "Corrector value for checker: ${cval1}"
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+res=$($pow_t1_5; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $pow_t1_5 ($res)"
+    error
+fi
+
+res=$($pow_t2_7; echo $?)
+
+if [ $res != 128 ]; then
+    echo "Fail: $pow_t2_7 ($res)"
+    error
+fi
+
+res=$($pow_t4_3; echo $?)
+
+if [ $res != 64 ]; then
+    echo "Fail: $pow_t4_3 ($res)"
+    error
+fi
+
+# pow: if.then
+
+printf "[Testing] pow: if.then2 @ power\n"
+
+basic_block="if.then2"
+fn="power"
+checkpid="c$(($RANDOM % 100))"
+seed=${seed}
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid} -seed=${seed}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0; echo $?)"
+cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1; echo $?)"
+
+echo "Corrector value for basic block: ${cval0}"
+echo "Corrector value for checker: ${cval1}"
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+res=$($pow_t1_5; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $pow_t1_5 ($res)"
+    error
+fi
+
+res=$($pow_t2_7; echo $?)
+
+if [ $res != 128 ]; then
+    echo "Fail: $pow_t2_7 ($res)"
+    error
+fi
+
+res=$($pow_t4_3; echo $?)
+
+if [ $res != 64 ]; then
+    echo "Fail: $pow_t4_3 ($res)"
     error
 fi
 
