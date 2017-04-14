@@ -141,7 +141,7 @@ checked=${base}\_c.ll
 assembly=${base}\_c.s
 binary=${base}\_c
 
-# pow: if.then
+# pow: if.else
 
 printf "[Testing] pow: if.else @ power\n"
 
@@ -185,7 +185,7 @@ if [ $res != 64 ]; then
     error
 fi
 
-# pow: if.then
+# pow: if.then2
 
 printf "[Testing] pow: if.then2 @ power\n"
 
@@ -226,6 +226,109 @@ res=$($pow_t4_3; echo $?)
 
 if [ $res != 64 ]; then
     echo "Fail: $pow_t4_3 ($res)"
+    error
+fi
+
+
+# fib
+
+fib_t1="./fib_c 1"
+fib_t2="./fib_c 2"
+fib_t3="./fib_c 3"
+fib_t5="./fib_c 5"
+fib_t10="./fib_c 10"
+
+program="../programs/ll/fib.ll"
+base=$(basename "$program" ".ll")
+checked=${base}\_c.ll
+assembly=${base}\_c.s
+binary=${base}\_c
+
+# fib: if.else
+
+printf "[Testing] fib: if.else @ fib\n"
+
+basic_block="if.else"
+fn="fib"
+checkpid="c$(($RANDOM % 100))"
+seed=$RANDOM
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid} -seed=${seed}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0; echo $?)"
+cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1; echo $?)"
+
+#echo "Corrector value for basic block: ${cval0}"
+#echo "Corrector value for checker: ${cval1}"
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+res=$($fib_t1; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $fib_t1 ($res)"
+    error
+fi
+
+res=$($fib_t5; echo $?)
+
+if [ $res != 5 ]; then
+    echo "Fail: $fib_t5 ($res)"
+    error
+fi
+
+res=$($fib_t10; echo $?)
+
+if [ $res != 55 ]; then
+    echo "Fail: $fib_t10 ($res)"
+    error
+fi
+
+# pow: if.else3
+
+printf "[Testing] fib: if.else3 @ fib\n"
+
+basic_block="if.else3"
+fn="fib"
+checkpid="c$(($RANDOM % 100))"
+seed=${seed}
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid} -seed=${seed}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0; echo $?)"
+cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1; echo $?)"
+
+#echo "Corrector value for basic block: ${cval0}"
+#echo "Corrector value for checker: ${cval1}"
+
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
+llc ${checked} -o ${assembly}
+clang ${assembly} -o ${binary}
+
+res=$($fib_t1; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $fib_t1 ($res)"
+    error
+fi
+
+res=$($fib_t5; echo $?)
+
+if [ $res != 5 ]; then
+    echo "Fail: $fib_t5 ($res)"
+    error
+fi
+
+res=$($fib_t10; echo $?)
+
+if [ $res != 55 ]; then
+    echo "Fail: $fib_t10 ($res)"
     error
 fi
 
