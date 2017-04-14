@@ -288,7 +288,7 @@ if [ $res != 55 ]; then
     error
 fi
 
-# pow: if.else3
+# fib: if.else3
 
 printf "[Testing] fib: if.else3 @ fib\n"
 
