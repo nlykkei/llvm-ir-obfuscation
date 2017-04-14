@@ -55,8 +55,8 @@ clang ${assembly} -o ${binary}
 cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0; echo $?)"
 cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1; echo $?)"
 
-echo "Corrector value for basic block: ${cval0}"
-echo "Corrector value for checker: ${cval1}"
+#echo "Corrector value for basic block: ${cval0}"
+#echo "Corrector value for checker: ${cval1}"
 
 opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
 llc ${checked} -o ${assembly}
@@ -99,8 +99,8 @@ clang ${assembly} -o ${binary}
 cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0; echo $?)"
 cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1; echo $?)"
 
-echo "Corrector value for basic block: ${cval0}"
-echo "Corrector value for checker: ${cval1}"
+#echo "Corrector value for basic block: ${cval0}"
+#echo "Corrector value for checker: ${cval1}"
 
 opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
 llc ${checked} -o ${assembly}
@@ -157,8 +157,8 @@ clang ${assembly} -o ${binary}
 cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0; echo $?)"
 cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1; echo $?)"
 
-echo "Corrector value for basic block: ${cval0}"
-echo "Corrector value for checker: ${cval1}"
+#echo "Corrector value for basic block: ${cval0}"
+#echo "Corrector value for checker: ${cval1}"
 
 opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
 llc ${checked} -o ${assembly}
@@ -201,8 +201,8 @@ clang ${assembly} -o ${binary}
 cval0="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0; echo $?)"
 cval1="$(objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1; echo $?)"
 
-echo "Corrector value for basic block: ${cval0}"
-echo "Corrector value for checker: ${cval1}"
+#echo "Corrector value for basic block: ${cval0}"
+#echo "Corrector value for checker: ${cval1}"
 
 opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -cval0=${cval0} -cval1=${cval1} -checkpid=${checkpid} -seed=${seed}
 llc ${checked} -o ${assembly}
