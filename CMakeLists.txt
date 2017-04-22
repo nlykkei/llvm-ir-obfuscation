@@ -14,4 +14,4 @@ add_subdirectory(checker)
 add_subdirectory(add)
 add_subdirectory(cyclomatic)
 add_subdirectory(ipred)
-
+add_subdirectory(water)
