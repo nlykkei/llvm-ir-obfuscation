@@ -7,14 +7,19 @@ DEBUG = False
 
 def main():
 
-    if len(sys.argv) < 5:
-        print('Usage: ./{program} watermark key output_file primes...'.format(program=sys.argv[0]))
+    if len(sys.argv) < 6:
+        print('Usage: ./{program} <watermark> <key> <output_file> <prime> <prime>...'.format(program=sys.argv[0]))
         exit(1)
 
     watermark = int(sys.argv[1])
     key = int(sys.argv[2], 16)
     output_file = sys.argv[3]
     primes = [int(sys.argv[i]) for i in range(4, len(sys.argv))]
+
+    #EQUATIONS
+    for i in range(len(primes) - 1):
+        for j in range(i + 1, len(primes)):
+            log('Equation: %d cong %d mod %d * %d' % (watermark, (watermark % (primes[i] * primes[j])), primes[i], primes[j]))
 
     # SPLIT
     sum = 0

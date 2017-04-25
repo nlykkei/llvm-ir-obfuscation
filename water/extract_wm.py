@@ -9,8 +9,8 @@ DEBUG = False
 
 def main():
     if len(sys.argv) < 6:
-        print('Usage: ./{program} program wm_label key primes...'.format(program=sys.argv[0]))
-        exit(1)
+        print('Usage: {program} <program> <wm_label> <key> <prime> <prime>...'.format(program=sys.argv[0]))
+        sys.exit(1)
 
     program = sys.argv[1]
     wm_label = sys.argv[2]
@@ -39,7 +39,7 @@ def main():
                     try:
                         file_offset = int(tokens[4][:-2], 16)
                     except ValueError as e:
-                        print(e)
+                        log(e)
                         sys.exit(1)
                     f.seek(file_offset, 0)
                     split_bytes = f.read(4)
@@ -73,7 +73,7 @@ def main():
 
     # SOLUTION
     lcm = None
-    moduli = [equations[i][1] * equations[i][2] for i in len(equations)]
+    moduli = [equations[i][1] * equations[i][2] for i in range(len(equations))]
 
     if len(moduli) == 1:
         lcm = moduli[0]
@@ -90,10 +90,11 @@ def main():
                 success = False
                 break # try next solution
         if success:
-            log('Solution: %d' % i)
-            break
+            log('Solution: ', end='')
+            print(i)
+            sys.exit(0)
 
-    print(wm_splits)
+    print('Could not find a solution!')
 
 def gcd(a, b):
     if b == 0:
@@ -110,9 +111,9 @@ def lcm_gen(a, b, *args):
         res = lcm(res, mod)
     return int(res)
 
-def log(s):
+def log(s, end='\n'):
     if DEBUG:
-        print(s)
+        print(s, end)
 
 if __name__ == '__main__':
     main()

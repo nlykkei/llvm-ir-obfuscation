@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-static cl::list<int> Splits("splits", cl::Positional, cl::CommaSeparated,
+static cl::list<unsigned int> Splits("splits", cl::Positional, cl::CommaSeparated,
                             cl::desc("CRT watermark splits"));
 
 namespace {
@@ -51,7 +51,7 @@ void ChineseWM::insertSplits(Module &M) {
     ArgsTy2.push_back(Type::getInt32Ty(M.getContext()));
     FunctionType *IntFunTy = FunctionType::get(Type::getVoidTy(M.getContext()), ArgsTy2, false);
 
-    for (int Split : Splits) {
+    for (auto& Split : Splits) {
 
         int IdxF = 0;
         Module::iterator FI;
@@ -62,7 +62,7 @@ void ChineseWM::insertSplits(Module &M) {
             std::advance(FI, IdxF);
         } while (FI->isDeclaration());
 
-        errs() << FI->getName() << "\n";
+        DEBUG(errs() << "Inserting piece " << std::to_string(Split) <<  " into " << FI->getName() << "\n");
 
         int IdxBB = rand() % FI->getBasicBlockList().size();
         Function::iterator BI = FI->begin();
