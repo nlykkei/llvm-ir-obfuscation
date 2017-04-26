@@ -45,21 +45,20 @@ namespace {
         }
 
 
-        void insertSplits(Module &M);
+        void insertSplits(Module &M, std::vector<Function *> &ValidFn);
 
         virtual bool runOnModule(Module &M) {
 
-            bool ready = false;
+            std::vector<Function *> ValidFn;
 
-            for (auto &F : M) {
+            for (Function &F : M) {
                 if (!F.isDeclaration() && F.getBasicBlockList().size() > 1) {
-                    ready = true;
-                    break;
+                    ValidFn.push_back(&F);
                 }
             }
 
-            if (ready) {
-                insertSplits(M);
+            if (!ValidFn.empty()) {
+                insertSplits(M, ValidFn);
                 return true;
             }
 
@@ -70,7 +69,7 @@ namespace {
 
 char ChineseWM::ID = 0;
 
-void ChineseWM::insertSplits(Module &M) {
+void ChineseWM::insertSplits(Module &M, std::vector<Function *> &ValidFn) {
 
     std::vector<BasicBlock *> WaterBB;
     int WM = 0;
@@ -82,34 +81,25 @@ void ChineseWM::insertSplits(Module &M) {
     ArgsTy2.push_back(Type::getInt32Ty(M.getContext()));
     FunctionType *IntFunTy = FunctionType::get(Type::getVoidTy(M.getContext()), ArgsTy2, false);
 
-    std::vector<Function *> ValidFun;
-
-    for (Function &F : M) {
-        if (F.isDeclaration() || F.getBasicBlockList().size() == 1) {
-            continue;
-        }
-        ValidFun.push_back(&F);
-    }
-
     for (auto &Split : Splits) {
 
         int IdxF = 0;
-        Module::iterator FI;
+        std::vector<Function *>::iterator FI;
         int IdxBB = 0;
         Function::iterator BI;
 
         // Get random function in module
-        IdxF = rand() % ValidFun.size();
-        FI = M.begin();
+        IdxF = rand() % ValidFn.size();
+        FI = ValidFn.begin();
         std::advance(FI, IdxF);
 
         // Get random basic block in function
-        IdxBB = rand() % (FI->getBasicBlockList().size() - 1);
+        IdxBB = rand() % ((*FI)->getBasicBlockList().size() - 1);
         IdxBB = IdxBB + 1;
-        BI = FI->begin();
+        BI = (*FI)->begin();
         std::advance(BI, IdxBB);
 
-        DEBUG(errs() << "Inserting piece " << std::to_string(Split) << " into " << FI->getName() << ":" << BI->getName()
+        DEBUG(errs() << "Inserting piece " << std::to_string(Split) << " into " << (*FI)->getName() << ":" << BI->getName()
                      << "\n");
 
         if (std::find(WaterBB.begin(), WaterBB.end(), &*BI) == WaterBB.end()) {
