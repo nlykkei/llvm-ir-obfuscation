@@ -143,10 +143,10 @@ namespace {
                             return true;
                         }
                     }
-                }
 
-                DEBUG(errs() << std::string(4, ' ') << "Could not find basic block \'" << CheckBB << "\' in function \'"
-                             << F.getName() << "\'" << "\n");
+                    DEBUG(errs() << std::string(4, ' ') << "Could not find basic block \'" << CheckBB << "\' in function \'"
+                                 << F.getName() << "\'" << "\n");
+                }
             }
 
             if (!foundFunction && !CheckFn.empty()) {

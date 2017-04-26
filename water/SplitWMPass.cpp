@@ -35,7 +35,8 @@ namespace {
             srand(time(NULL));
             file.open(Filename.c_str(), std::ios::out | std::ios::trunc);
             if (!file.is_open()) {
-                errs() << "Could not open file: " << Filename << "\n";
+                errs() << "Could not open file \'" << Filename << "\'" << "\n";
+                exit(1);
             }
         }
 
