@@ -313,6 +313,10 @@ if [ $res != 55 ]; then
     error
 fi
 
+echo "[Cleanup] Removing files..."
+rm fac*
+rm fib*
+rm pow*
 
 echo "[Success] All tests passed..."
 exit 0

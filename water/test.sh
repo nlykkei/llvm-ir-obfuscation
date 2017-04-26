@@ -59,6 +59,12 @@ if [ ${watermark} -ne 17 ]; then
     exit 1
 fi
 
+echo "[Cleaning] Removing files..."
+rm sum*
+
+rm splits
+rm watermark.dat
+
 echo "[Success] All tests passed..."
 exit 0
 
