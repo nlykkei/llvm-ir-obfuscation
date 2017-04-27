@@ -47,7 +47,7 @@ primes="${@:4}" # primes
 IFS=$' '
 read -d $'\n' -a array < <(python3 ./split_wm.py ${watermark} ${key} ${output_file} ${primes})
 
-echo -n "Encrypted splits (${#array[@]}): "
+echo -n "[Info] Encrypted splits (${#array[@]}): "
 
 for element in "${array[@]}"
 do
@@ -61,7 +61,7 @@ marked=${base}\_w.ll
 assembly=${base}\_w.s
 binary=${base}\_w
 
-opt -load ../cmake-build-debug/water/libSplitWMPass.so -splitWM -S ${program} -o ${marked} -debug -splits "${array[@]}"
+opt -load ../cmake-build-debug/water/libSplitWMPass.so -splitWM -S ${program} -o ${marked} -splits "${array[@]}"
 llc ${marked} -o ${assembly}
 clang ${assembly} -o ${binary}
 

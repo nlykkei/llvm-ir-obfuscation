@@ -42,7 +42,7 @@ watermark=$(objdump -dF ${program} | python3 ./extract_wm.py ${program} ${label}
 if [ $? -ne 0 ]; then
     echo "Error occurred: ${watermark}"
 else
-    echo "Watermark: ${watermark}"
+    echo ${watermark}
 fi
 
 
