@@ -76,7 +76,7 @@ done < watermark.dat
 echo ${check_fns}
 echo ${check_bbs}
 
-opt -load ../cmake-build-debug/water/checker/libWMCheckerTPass.so -checkerWMT -S ${marked_checked} -o ${marked_checked} -checkfns $check_fns -checkbbs $check_bbs -debug
+opt -load ../cmake-build-debug/water/libWMCheckerTPass.so -checkerWMT -S ${marked_checked} -o ${marked_checked} -checkfns $check_fns -checkbbs $check_bbs -debug
 
 llc ${marked_checked} -o ${assembly}
 clang ${assembly} -o ${binary}

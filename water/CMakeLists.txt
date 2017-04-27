@@ -4,14 +4,18 @@ project("SplitWMPass")
 
 add_library(SplitWMPass MODULE
     # List your source files here.
-        SplitWMPass.cpp
+    SplitWMPass.cpp
+    )
+
+add_library(WMCheckerTPass MODULE
+    WMCheckerTPass.cpp
 )
 
-add_subdirectory(checker)
+     
 
 # LLVM is (typically) built with no C++ RTTI. We need to match that;
 # otherwise, we'll get linker errors about missing RTTI data.
-set_target_properties(SplitWMPass PROPERTIES
+set_target_properties(SplitWMPass WMCheckerTPass PROPERTIES
     COMPILE_FLAGS "-fno-rtti"
 )
 

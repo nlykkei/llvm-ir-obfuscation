@@ -61,7 +61,6 @@ fi
 
 echo "[Cleaning] Removing files..."
 rm sum*
-
 rm splits
 rm watermark.dat
 
