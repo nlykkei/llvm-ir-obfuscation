@@ -47,7 +47,7 @@ primes="${@:4}" # primes
 IFS=$' '
 read -d $'\n' -a array < <(python3 ./split_wm.py ${watermark} ${key} ${output_file} ${primes})
 
-echo -n "Encrypted splits (${#array[@]}): "
+echo -n "[Info] Encrypted splits (${#array[@]}): "
 
 for element in "${array[@]}"
 do
@@ -61,33 +61,33 @@ marked_checked=${base}\_wc.ll
 assembly=${base}\_wc.s
 binary=${base}\_wc
 
-opt -load ../cmake-build-debug/water/libSplitWMPass.so -splitWM -S ${program} -o ${marked_checked} -debug -splits ${array[@]}
+opt -load ../cmake-build-debug/water/libSplitWMPass.so -splitWM -S ${program} -o ${marked_checked} -splits ${array[@]} #-debug
 
 check_fns=""
 check_bbs=""
 
 while IFS=":" read fn bb
 do
-echo Read: ${fn}:${bb}
+#echo Read: ${fn}:${bb}
 check_fns="${check_fns} ${fn}"
 check_bbs="${check_bbs} ${bb}"
 done < watermark.dat
 
-echo ${check_fns}
-echo ${check_bbs}
+#echo ${check_fns}
+#echo ${check_bbs}
 
-opt -load ../cmake-build-debug/water/libWMCheckerTPass.so -checkerWMT -S ${marked_checked} -o ${marked_checked} -checkfns $check_fns -checkbbs $check_bbs -debug
+opt -load ../cmake-build-debug/water/libWMCheckerTPass.so -checkerWMT -S ${marked_checked} -o ${marked_checked} -checkfns $check_fns -checkbbs $check_bbs #-debug
 
 llc ${marked_checked} -o ${assembly}
 clang ${assembly} -o ${binary}
 
 while IFS=":" read cstart cend cslot
 do
-echo Read: ${cstart} ${cend} ${cslot}
+#echo Read: ${cstart} ${cend} ${cslot}
 objdump -d ${binary} | ./cval_wm.py ${cstart} ${cend}
 cval0=$(echo $?)
 
-echo "Corrector value for basic block: ${cval0}"
+#echo "Corrector value for basic block: ${cval0}"
 
 objdump -dF ${binary} | ./cslot_wm.py $binary ${cslot} $cval0
 done < corrector.dat

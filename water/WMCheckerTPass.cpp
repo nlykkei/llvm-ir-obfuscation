@@ -94,7 +94,8 @@ bool WMCheckerT::findAndCheckBB(Module &M, std::string FName, std::string BBName
                 if (BBName == BB.getName()) {
 
                     if (&F.getEntryBlock() == &BB) {
-                        errs() << "[Error] Cannot insert checker before (entry) basic block \'" << BBName << "\' in function \'" << FName << "\'" << "\n";
+                        errs() << "[Error] Cannot insert checker before " << FName << ":" << BBName << "\n";
+                        errs() << "[Error] Trying to find another candidate..." << "\n";
                         continue;
                     }
 
@@ -123,7 +124,7 @@ bool WMCheckerT::findAndCheckBB(Module &M, std::string FName, std::string BBName
                     BasicBlock *InsertBB = &*It;
                     insertCheckerBefore(InsertBB, Id1);
 
-                    errs() << "[Info] Inserted checker before basic block \'" << BBName << "\' in function \'" << FName << "\'" << "\n";
+                    errs() << "[Info] Inserting checker before " << FName << ":" << BBName << "\n";
 
                     return true;
                 }
@@ -131,7 +132,7 @@ bool WMCheckerT::findAndCheckBB(Module &M, std::string FName, std::string BBName
         }
     }
 
-    errs() << "[Error] Cannot insert checker before basic block \'" << BBName << "\' in function \'" << FName << "\'" << "\n";
+    errs() << "[Error] Cannot insert checker before " << FName << ":" << BBName << "\n";
     return false;
 }
 

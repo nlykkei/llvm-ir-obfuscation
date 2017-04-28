@@ -61,7 +61,7 @@ marked=${base}\_w.ll
 assembly=${base}\_w.s
 binary=${base}\_w
 
-opt -load ../cmake-build-debug/water/libSplitWMPass.so -splitWM -S ${program} -o ${marked} -splits "${array[@]}"
+opt -load ../cmake-build-debug/water/libSplitWMPass.so -splitWM -S ${program} -o ${marked} -splits "${array[@]}" #-debug
 llc ${marked} -o ${assembly}
 clang ${assembly} -o ${binary}
 

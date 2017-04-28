@@ -99,13 +99,10 @@ void ChineseWM::insertSplits(Module &M, std::vector<Function *> &ValidFn) {
         BI = (*FI)->begin();
         std::advance(BI, IdxBB);
 
-        DEBUG(errs() << "Inserting piece " << std::to_string(Split) << " into " << (*FI)->getName() << ":" << BI->getName()
-                     << "\n");
+        errs() << "[Info] Inserting watermark piece " << std::to_string(Split) << " into " << (*FI)->getName() << ":" << BI->getName() << "\n";
 
         if (std::find(WaterBB.begin(), WaterBB.end(), &*BI) == WaterBB.end()) {
             WaterBB.push_back(&*BI);
-        } else {
-            DEBUG(errs() << "Already inserted watermark into " << BI->getName() << "\n");
         }
 
         Instruction *I = &*BI->getFirstInsertionPt();
