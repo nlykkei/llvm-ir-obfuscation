@@ -90,6 +90,59 @@ def main():
 
     print('Could not find a solution!')
 
+
+class UGraph:
+    def __init__(self, name, N, E):
+        self.name = name
+        self.N = N
+        self.E = E
+
+    def print(self):
+        print('Graph: ' + self.name)
+        for node in self.N:
+            print(node)
+        for edge in self.E:
+            print(edge.start_node + ' -> ' + edge.end_node)
+
+    def remove_node(self, node):
+        try:
+            self.N.remove(node)
+        except KeyError as e:
+            return False
+
+        for edge in self.E:
+            if edge.start_node == node or edge.end_node == node:
+                E.remove(edge)
+
+        return True
+
+    def remove_edge(self, edge):
+        try:
+            self.E.remove(edge)
+        except KeyError as e:
+            return False
+
+        return True
+
+    class Node:
+        def __init__(self, name, val):
+            self.name = name
+            self.val = val
+
+        def __str__(self):
+            return self.name + ' (' + repr(self.val) + ')'
+
+        def __eq__(self, other):
+            return self.name == other.name and self.val == other.val
+
+    class Edge:
+        def __init(self, start_node, end_node):
+            self.start_node = start_node
+            self.end_node = end_node
+
+        def __eq__(self, other):
+            return self.start_node == other.start_node and self.end_node == other.end_node
+
 def gcd(a, b):
     if b == 0:
         return a
