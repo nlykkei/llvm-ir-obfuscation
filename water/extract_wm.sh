@@ -34,10 +34,9 @@ fi
 
 program=$1 # binary
 key=$2 # encryption key
-label="wm_split" # label
 primes="${@:3}" # primes
 
-watermark=$(objdump -dF ${program} | python3 ./extract_wm.py ${program} ${label} ${key} ${primes})
+watermark=$(objdump -hF ${program} | grep .text | python3 ./extract_wm.py ${program} ${key} ${primes})
 
 if [ $? -ne 0 ]; then
     echo "Error occurred: ${watermark}"

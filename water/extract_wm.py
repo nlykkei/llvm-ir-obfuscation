@@ -9,43 +9,37 @@ DEBUG = False
 
 def main():
     if len(sys.argv) < 6:
-        print('Usage: {program} <program> <wm_label> <key> <prime> <prime>...'.format(program=sys.argv[0]))
+        print('Usage: {program} <program> <key> <prime> <prime>...'.format(program=sys.argv[0]))
         sys.exit(1)
 
     program = sys.argv[1]
-    wm_label = sys.argv[2]
-    key = int(sys.argv[3], 16)
-    primes = [int(sys.argv[i]) for i in range(4, len(sys.argv))]
-    pattern = '<\.' + wm_label + '\d>'
+    key = int(sys.argv[2], 16)
+    primes = [int(sys.argv[i]) for i in range(3, len(sys.argv))]
 
     log('program: %s' % program)
-    log('wm_label: %s' % wm_label)
     log('key: %x' % key)
     log('primes: %s' % primes)
-    log('pattern: %s' % pattern)
 
     # EXTRACT
-    wm_splits= []
-    file_offset = None
+    wm_splits = []
+    prefix = bytes(iter([0x66] * 15))
+
+    input = sys.stdin.read().split()
+    text_offset = int(input[2], 16)
+    text_size = int(input[5], 16)
 
     with open(program, 'rb+') as f:
-        it = iter(sys.stdin)
-        for token_string in it:
-            tokens = token_string.split()
-            for token in tokens:
-                match = re.match(pattern, token)
-                if match:
-                    log('Found: %s' % repr(match.group()))
-                    try:
-                        file_offset = int(tokens[4][:-2], 16)
-                    except ValueError as e:
-                        log(e)
-                        sys.exit(1)
-                    f.seek(file_offset, 0)
-                    split_bytes = f.read(4)
-                    wm_split = int.from_bytes(split_bytes, byteorder='little', signed=False)
-                    wm_splits.append(wm_split)
-                    break
+        f.seek(text_offset)
+        for i in range(text_size - 15 + 1):
+            bytes_read = f.read(15)
+            if (bytes_read == bytes(iter([0x66] * 15))):
+                log("Found byte sequence at position: %d" % int(text_offset + i))
+                split_bytes = f.read(4)
+                wm_split = int.from_bytes(split_bytes, byteorder='little', signed=False)
+                wm_splits.append(wm_split)
+                log("Read split: %d" % wm_split)
+            f.seek(text_offset + i + 1)
+
 
     log('Extracted encryptions: %s' % repr(wm_splits))
 
