@@ -74,12 +74,17 @@ void ChineseWM::insertSplits(Module &M, std::vector<Function *> &ValidFn) {
     std::vector<BasicBlock *> WaterBB;
     int WM = 0;
 
-    std::vector<Type *> ArgsTy;
-    FunctionType *VoidFunTy = FunctionType::get(Type::getVoidTy(M.getContext()), ArgsTy, false);
+    std::vector<Type *> ArgsTy0;
+    FunctionType *VoidFunTy = FunctionType::get(Type::getVoidTy(M.getContext()), ArgsTy0, false);
+
+    std::vector<Type *> ArgsTy1;
+    ArgsTy1.push_back(Type::getInt32Ty(M.getContext()));
+    FunctionType *IntFunTy0 = FunctionType::get(Type::getVoidTy(M.getContext()), ArgsTy1, false);
 
     std::vector<Type *> ArgsTy2;
     ArgsTy2.push_back(Type::getInt32Ty(M.getContext()));
-    FunctionType *IntFunTy = FunctionType::get(Type::getVoidTy(M.getContext()), ArgsTy2, false);
+    ArgsTy2.push_back(Type::getInt32Ty(M.getContext()));
+    FunctionType *IntFunTy1 = FunctionType::get(Type::getVoidTy(M.getContext()), ArgsTy2, false);
 
     for (auto &Split : Splits) {
 
@@ -110,12 +115,19 @@ void ChineseWM::insertSplits(Module &M, std::vector<Function *> &ValidFn) {
         IRBuilder<> Builder(I);
 
         Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string("jmp .end_") + std::to_string(WM), "", true));
+
         Builder.CreateCall(
                 InlineAsm::get(VoidFunTy, std::string(".wm_split") + std::to_string(WM) + std::string(":"), "", true));
 
-        std::vector<Value *> CArgs;
-        CArgs.push_back(ConstantInt::get(Type::getInt32Ty(M.getContext()), Split));
-        Builder.CreateCall(InlineAsm::get(IntFunTy, std::string(".4byte ${0:c}"), "i", true), CArgs); // eliminate $
+        std::vector<Value *> CArgs0;
+        CArgs0.push_back(ConstantInt::get(Type::getInt32Ty(M.getContext()), 15));
+        CArgs0.push_back(ConstantInt::get(Type::getInt32Ty(M.getContext()), 0x66));
+
+        Builder.CreateCall(InlineAsm::get(IntFunTy1, std::string(".fill ${0:c}, 1, ${1:c}"), "i,i", true), CArgs0); // eliminate $
+
+        std::vector<Value *> CArgs1;
+        CArgs1.push_back(ConstantInt::get(Type::getInt32Ty(M.getContext()), Split));
+        Builder.CreateCall(InlineAsm::get(IntFunTy0, std::string(".4byte ${0:c}"), "i", true), CArgs1); // eliminate $
 
         Builder.CreateCall(
                 InlineAsm::get(VoidFunTy, std::string(".end_") + std::to_string(WM) + std::string(":"), "", true));
