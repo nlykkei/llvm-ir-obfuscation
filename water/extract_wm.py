@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 
-# objdump -dF program | python3 extract_wm.py program wm_label key primes...
-
 import sys
 import re
 
 DEBUG = False
+
 
 def main():
     if len(sys.argv) < 6:
@@ -40,7 +39,6 @@ def main():
                 log("Read split: %d" % wm_split)
             f.seek(text_offset + i + 1)
 
-
     log('Extracted encryptions: %s' % repr(wm_splits))
 
     # DECRYPT
@@ -59,11 +57,74 @@ def main():
                 else:
                     equations.append((wm_splits[i], primes[j], primes[k]))
                     break
-            else: # no break in loop
+            else:  # no break in loop
                 continue
             break
+            # ignore wm_splits[i] if value too large
 
     log('Equations: %s' % repr(equations))
+
+    # GRAPH
+    for p in primes:
+        votes = [0] * p
+        for equation in equations:
+            if p == equation[1] or p == equation[2]:
+                    votes[equation[0] % p] += 1
+
+        highest_vote = (None, None)
+        next_highest_vote = (None, None)
+
+        for i in range(len(votes)):
+            if highest_vote[0] is None or highest_vote[1] < votes[i]:
+                next_highest_vote = highest_vote
+                highest_vote = (i, votes[i])
+
+        if next_highest_vote[1] is not None and highest_vote[1] > 2 * next_highest_vote[1]:
+            max = highest_vote[0]
+            for equation in equations:
+                if (p == equation[1] or p == equation[2]) and (equation[0] % p) != max:
+                    equations.remove(equation)
+
+    NG_set = set()
+    NH_set = set()
+    N_list = []
+    for i in range(len(equations)):
+        node = UGraph.Node(str(i), equations[i])
+        NG_set.add(node)
+        NH_set.add(node)
+        N_list.append(node)
+
+    G = UGraph('G', NG_set)
+    H = UGraph('H', NH_set)
+
+    for i in range(len(N_list) - 1):
+        for j in range(i + 1, len(N_list)):
+            cong1 = N_list[i].val
+            cong2 = N_list[j].val
+
+            # inconsistent
+            if (((cong1[1] == cong2[1] or cong1[1] == cong2[2]) and
+                     ((cong1[0] % cong1[1]) != (cong2[0] % cong1[1]))) or
+                    ((cong1[2] == cong2[1] or cong1[2] == cong2[2]) and
+                         ((cong1[0] % cong1[2]) != (cong2[0] % cong1[2])))):
+                G.add_edge(UGraph.Edge(N_list[i], N_list[j]))
+
+            # consistent
+            if (((cong1[1] == cong2[1] or cong1[1] == cong2[2]) and
+                     ((cong1[0] % cong1[1]) == (cong2[0] % cong1[1]))) or
+                    ((cong1[2] == cong2[1] or cong1[2] == cong2[2]) and
+                         ((cong1[0] % cong1[2]) == (cong2[0] % cong1[2])))):
+                H.add_edge(UGraph.Edge(N_list[i], N_list[j]))
+
+
+    equations = [] # set of consistent equations
+
+    while not G.is_empty():
+        v = H.max_degree_node()
+        S = G.neighbours(v)
+        G.remove_nodes(S)
+        H.remove_nodes(S)
+        equations.append(v.val)
 
     # SOLUTION
     lcm = None
@@ -79,10 +140,10 @@ def main():
     for i in range(lcm):
         success = True
         for j in range(len(equations)):
-            res = (i - equations[j][0]) % (equations[j][1]*equations[j][2])
+            res = (i - equations[j][0]) % (equations[j][1] * equations[j][2])
             if res != 0:
                 success = False
-                break # try next solution
+                break  # try next solution
         if success:
             log('Solution: ', end='')
             print(i)
@@ -92,9 +153,14 @@ def main():
 
 
 class UGraph:
-    def __init__(self, name, N, E):
+    def __init__(self, name, N=None, E=None):
         self.name = name
+        if N is None:
+            N = set()
         self.N = N
+
+        if E is None:
+            E = set()
         self.E = E
 
     def print(self):
@@ -102,7 +168,19 @@ class UGraph:
         for node in self.N:
             print(node)
         for edge in self.E:
-            print(edge.start_node + ' -> ' + edge.end_node)
+            print(edge)
+
+    def is_empty(self):
+        return not self.N
+
+    def get_node(self, val):
+        for node in self.N:
+            if node.val == val:
+                return node
+        return None
+
+    def add_node(self, node):
+        return self.N.add(node)
 
     def remove_node(self, node):
         try:
@@ -110,11 +188,26 @@ class UGraph:
         except KeyError as e:
             return False
 
+        remove_edges = []
+
         for edge in self.E:
             if edge.start_node == node or edge.end_node == node:
-                E.remove(edge)
+                remove_edges.append(edge)
+
+        for edge in remove_edges:
+            try:
+                self.E.remove(edge)
+            except KeyError as e:
+                return False
 
         return True
+
+    def remove_nodes(self, nodes):
+        for node in nodes:
+            self.remove_node(node)
+
+    def add_edge(self, edge):
+        return self.E.add(edge)
 
     def remove_edge(self, edge):
         try:
@@ -123,6 +216,22 @@ class UGraph:
             return False
 
         return True
+
+    def max_degree_node(self):
+        nodes_dict = {node: 0 for node in self.N}
+        for edge in self.E:
+            nodes_dict[edge.start_node] += 1
+            nodes_dict[edge.end_node] += 1
+        return max(nodes_dict, key=lambda k: nodes_dict[k])
+
+    def neighbours(self, node):
+        neighbours = set([node])
+        for edge in self.E:
+            if edge.start_node == node:
+                neighbours.add(edge.end_node)
+            if edge.end_node == node:
+                neighbours.add(edge.start_node)
+        return neighbours
 
     class Node:
         def __init__(self, name, val):
@@ -135,13 +244,22 @@ class UGraph:
         def __eq__(self, other):
             return self.name == other.name and self.val == other.val
 
+        def __hash__(self):
+            return hash(repr(self))
+
     class Edge:
-        def __init(self, start_node, end_node):
+        def __init__(self, start_node, end_node):
             self.start_node = start_node
             self.end_node = end_node
 
+        def __str__(self):
+            return self.start_node.name + ' -> ' + self.end_node.name
+
         def __eq__(self, other):
             return self.start_node == other.start_node and self.end_node == other.end_node
+
+        def __hash__(self):
+            return hash(repr(self))
 
 def gcd(a, b):
     if b == 0:
@@ -149,8 +267,10 @@ def gcd(a, b):
     else:
         return gcd(b, a % b)
 
+
 def lcm(a, b):
     return (a * b) / gcd(a, b)
+
 
 def lcm_gen(a, b, *args):
     res = lcm(a, b)
@@ -158,9 +278,11 @@ def lcm_gen(a, b, *args):
         res = lcm(res, mod)
     return int(res)
 
+
 def log(s, end='\n'):
     if DEBUG:
         print(s, end)
+
 
 if __name__ == '__main__':
     main()
