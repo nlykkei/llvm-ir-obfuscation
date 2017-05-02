@@ -47,6 +47,10 @@ def main():
 
     log('Decrypted splits: %s' % repr(wm_splits))
 
+    #wm_splits.append(21)
+    #wm_splits.append(4)
+    #wm_splits.append(16)
+
     # COMBINE
     equations = []
     for i in range(len(wm_splits)):
@@ -69,7 +73,7 @@ def main():
         votes = [0] * p
         for equation in equations:
             if p == equation[1] or p == equation[2]:
-                    votes[equation[0] % p] += 1
+                votes[equation[0] % p] += 1
 
         highest_vote = (None, None)
         next_highest_vote = (None, None)
@@ -97,6 +101,53 @@ def main():
     G = UGraph('G', NG_set)
     H = UGraph('H', NH_set)
 
+    #   Theory:
+    #
+    #   W = x mod p_1*p_2 (1)
+    #   W = y mod q_1*q_2 (2)
+    #
+    #   Suppose p_1 = q_1 and x mod p_1 = y mod p_1, i.e., (1) and (2) are consistent:
+    #
+    #   (#1) If p_2 =! q_2 then x = y mod gcd(p_1*p_2, q_1*q_2) (=p_1)
+    #
+    #           => there exists a solution by CRT (OK)
+    #
+    #   (#2) If p_2 = q_2 and x mod p_2 = y mod p_2, i.e., (1) and (2) are consistent, then x = y mod p_1*p_2 (gcd(p_1, p_2) = 1)
+    #
+    #           => there exists a solution by CRT (OK)
+    #
+    #   (#3) If p_2 = q_2 and x mod p_2 != y mod p_2, i.e., (1) and (2) are inconsistent, then x != y mod p_1*p_2:
+    #
+    #           Proof: Suppose x = y mod p_1*p_2 then x = y mod p_2, a contradiction.
+    #
+    #           => there doesn't exist a solution by CRT (FAIL)
+    #
+    #   In case (#1) and (#2), the equations (1) and (2) could end up in U of consistent congruences, because there exists a solution by CRT.
+    #
+    #   In case (#3), both equations cannot end up in U, since they are neighbours in G. Thus, if one is selected for U, the other is deleted from H.
+    #
+    #   => Congruences (1) and (2) cannot both be consistent and inconsistent!
+    #
+    #   ... They can be either consistent or inconsistent or neither.
+    #
+    #   Invariant: equations in U were not adjacent in G.
+    #
+    #       => They are either pairwise consistent (only) or non-related
+    #
+    #   Given two equations in U, say (1) and (2):
+    #
+    #       - If they are consistent then a solution exist by CRT.
+    #
+    #       - If they are non-related then gcd(p_1*p_2, q_1*q_2) = 1, so a solution (clearly) exists by CRT.
+    #
+    #       => A unique solution exists modulo lcm().
+    #
+    #       => Since each equation can only contain p_i*p_j of original primes, the lcm() <= p_1*...*p_r.
+    #
+    #       => But, clearly, the original equations are consistent, so given these are chosen as part of U, lcm() = p_1*...*p_r.
+    #
+    #       => Thus, the solution must be W.
+
     for i in range(len(N_list) - 1):
         for j in range(i + 1, len(N_list)):
             cong1 = N_list[i].val
@@ -116,8 +167,10 @@ def main():
                          ((cong1[0] % cong1[2]) == (cong2[0] % cong1[2])))):
                 H.add_edge(UGraph.Edge(N_list[i], N_list[j]))
 
+    equations = []  # set of consistent equations
 
-    equations = [] # set of consistent equations
+    # H.print_graph()
+    # G.print_graph()
 
     while not G.is_empty():
         v = H.max_degree_node()
@@ -125,19 +178,22 @@ def main():
         G.remove_nodes(S)
         H.remove_nodes(S)
         equations.append(v.val)
+        # H.print_graph()
+        # G.print_graph()
+        # print('Equations: ', equations, file=sys.stderr)
 
     # SOLUTION
-    lcm = None
+    lcm_primes = None
     moduli = [equations[i][1] * equations[i][2] for i in range(len(equations))]
 
     if len(moduli) == 1:
-        lcm = moduli[0]
+        lcm_primes = moduli[0]
     else:
-        lcm = lcm_gen(moduli[0], moduli[1], *moduli[2:])
+        lcm_primes = lcm_gen(moduli[0], moduli[1], *moduli[2:])
 
-    log('Least-common-multiple: %d' % lcm)
+    log('Least-common-multiple: %d' % lcm_primes)
 
-    for i in range(lcm):
+    for i in range(lcm_primes):
         success = True
         for j in range(len(equations)):
             res = (i - equations[j][0]) % (equations[j][1] * equations[j][2])
@@ -163,20 +219,25 @@ class UGraph:
             E = set()
         self.E = E
 
-    def print(self):
-        print('Graph: ' + self.name)
+    def print_graph(self):
+        print('Graph: ' + self.name, file=sys.stderr)
+        print('N: ', file=sys.stderr, end='')
         for node in self.N:
-            print(node)
+            print(node, file=sys.stderr, end=' ')
+        print(file=sys.stderr)
+        print('E: ', file=sys.stderr, end=' ')
         for edge in self.E:
-            print(edge)
+            print(edge, file=sys.stderr, end=' ')
+        print(file=sys.stderr)
 
     def is_empty(self):
         return not self.N
 
-    def get_node(self, val):
+    def get_node(self, name, val=None):
         for node in self.N:
-            if node.val == val:
-                return node
+            if node.name == name:
+                if val is None or node.val == val:
+                    return node
         return None
 
     def add_node(self, node):
@@ -207,14 +268,15 @@ class UGraph:
             self.remove_node(node)
 
     def add_edge(self, edge):
-        return self.E.add(edge)
+        if edge.start_node in self.N and edge.end_node in self.N:
+            return self.E.add(edge)
+        return False
 
     def remove_edge(self, edge):
         try:
             self.E.remove(edge)
         except KeyError as e:
             return False
-
         return True
 
     def max_degree_node(self):
@@ -260,6 +322,7 @@ class UGraph:
 
         def __hash__(self):
             return hash(repr(self))
+
 
 def gcd(a, b):
     if b == 0:

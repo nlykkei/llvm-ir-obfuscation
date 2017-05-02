@@ -34,6 +34,7 @@ namespace {
     struct WMCheckerT : public ModulePass {
         static char ID;
         std::ofstream file;
+        std::vector<int> usedRandom;
 
 
         WMCheckerT() : ModulePass(ID) {
@@ -83,7 +84,14 @@ char WMCheckerT::ID = 0;
 
 bool WMCheckerT::findAndCheckBB(Module &M, std::string FName, std::string BBName) {
 
-    int r = rand() % 1000;
+    int r = 0;
+
+    do {
+        r = rand() % 1000;
+    } while (std::find(usedRandom.begin(), usedRandom.end(), r) != usedRandom.end());
+
+    usedRandom.push_back(r);
+
     std::stringstream ss;
     ss << std::setw(3) << std::setfill('0') << r;
     std::string pid(ss.str());
