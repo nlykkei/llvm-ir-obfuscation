@@ -45,19 +45,39 @@ printf "[Testing] fac: if.then @ fac\n"
 
 basic_block="if.then"
 fn="fac"
-checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
-llc ${checked} -o ${assembly}
-clang ${assembly} -o ${binary}
+./checker.sh ${program} ${fn} ${basic_block} 1
 
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
-cval0=$(echo $?)
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
-cval1=$(echo $?)
+res=$($fac_t1; echo $?)
 
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+if [ $res != 1 ]; then
+    echo "Fail: $fac_t1 ($res)"
+    error
+fi
+
+res=$($fac_t4; echo $?)
+
+if [ $res != 24 ]; then
+    echo "Fail: $fac_t1 ($res)"
+    error
+fi
+
+res=$($fac_t5; echo $?)
+
+if [ $res != 120 ]; then
+    echo "Fail: $fac_t1 ($res)"
+    error
+fi
+
+
+# fac: if.then (3 checkers)
+
+printf "[Testing] fac: if.then @ fac (3 checkers)\n"
+
+basic_block="if.then"
+fn="fac"
+
+./checker.sh ${program} ${fn} ${basic_block} 3
 
 res=$($fac_t1; echo $?)
 
@@ -86,19 +106,40 @@ printf "[Testing] fac: if.else @ fac\n"
 
 basic_block="if.else"
 fn="fac"
-checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
-llc ${checked} -o ${assembly}
-clang ${assembly} -o ${binary}
 
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
-cval0=$(echo $?)
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
-cval1=$(echo $?)
+./checker.sh ${program} ${fn} ${basic_block} 1
 
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+res=$($fac_t1; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $fac_t1 ($res)"
+    error
+fi
+
+res=$($fac_t4; echo $?)
+
+if [ $res != 24 ]; then
+    echo "Fail: $fac_t1 ($res)"
+    error
+fi
+
+res=$($fac_t5; echo $?)
+
+if [ $res != 120 ]; then
+    echo "Fail: $fac_t1 ($res)"
+    error
+fi
+
+# fac: if.else (4 checkers)
+
+printf "[Testing] fac: if.else @ fac (4 checkers)\n"
+
+basic_block="if.else"
+fn="fac"
+
+
+./checker.sh ${program} ${fn} ${basic_block} 4
 
 res=$($fac_t1; echo $?)
 
@@ -135,25 +176,14 @@ checked=${base}\_c.ll
 assembly=${base}\_c.s
 binary=${base}\_c
 
-# pow: if.then
+# pow: if.else
 
 printf "[Testing] pow: if.else @ power\n"
 
 basic_block="if.else"
 fn="power"
-checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
-llc ${checked} -o ${assembly}
-clang ${assembly} -o ${binary}
-
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
-cval0=$(echo $?)
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
-cval1=$(echo $?)
-
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+./checker.sh ${program} ${fn} ${basic_block} 1
 
 res=$($pow_t1_5; echo $?)
 
@@ -176,25 +206,74 @@ if [ $res != 64 ]; then
     error
 fi
 
-# pow: if.then
+# pow: if.else (2 checkers)
+
+printf "[Testing] pow: if.else @ power (2 checkers)\n"
+
+basic_block="if.else"
+fn="power"
+
+./checker.sh ${program} ${fn} ${basic_block} 2
+
+res=$($pow_t1_5; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $pow_t1_5 ($res)"
+    error
+fi
+
+res=$($pow_t2_7; echo $?)
+
+if [ $res != 128 ]; then
+    echo "Fail: $pow_t2_7 ($res)"
+    error
+fi
+
+res=$($pow_t4_3; echo $?)
+
+if [ $res != 64 ]; then
+    echo "Fail: $pow_t4_3 ($res)"
+    error
+fi
+
+# pow: if.then2
 
 printf "[Testing] pow: if.then2 @ power\n"
 
 basic_block="if.then2"
 fn="power"
-checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
-llc ${checked} -o ${assembly}
-clang ${assembly} -o ${binary}
+./checker.sh ${program} ${fn} ${basic_block} 1
 
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
-cval0=$(echo $?)
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
-cval1=$(echo $?)
+res=$($pow_t1_5; echo $?)
 
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+if [ $res != 1 ]; then
+    echo "Fail: $pow_t1_5 ($res)"
+    error
+fi
+
+res=$($pow_t2_7; echo $?)
+
+if [ $res != 128 ]; then
+    echo "Fail: $pow_t2_7 ($res)"
+    error
+fi
+
+res=$($pow_t4_3; echo $?)
+
+if [ $res != 64 ]; then
+    echo "Fail: $pow_t4_3 ($res)"
+    error
+fi
+
+# pow: if.then2 (5 checkers)
+
+printf "[Testing] pow: if.then2 @ power (5 checkers)\n"
+
+basic_block="if.then2"
+fn="power"
+
+./checker.sh ${program} ${fn} ${basic_block} 5
 
 res=$($pow_t1_5; echo $?)
 
@@ -237,19 +316,8 @@ printf "[Testing] fib: if.else @ fib\n"
 
 basic_block="if.else"
 fn="fib"
-checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
-llc ${checked} -o ${assembly}
-clang ${assembly} -o ${binary}
-
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
-cval0=$(echo $?)
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
-cval1=$(echo $?)
-
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+./checker.sh ${program} ${fn} ${basic_block} 1
 
 res=$($fib_t1; echo $?)
 
@@ -271,6 +339,37 @@ if [ $res != 55 ]; then
     echo "Fail: $fib_t10 ($res)"
     error
 fi
+
+# fib: if.else (2 checkers)
+
+printf "[Testing] fib: if.else @ fib (2 checkers)\n"
+
+basic_block="if.else"
+fn="fib"
+
+./checker.sh ${program} ${fn} ${basic_block} 2
+
+res=$($fib_t1; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $fib_t1 ($res)"
+    error
+fi
+
+res=$($fib_t5; echo $?)
+
+if [ $res != 5 ]; then
+    echo "Fail: $fib_t5 ($res)"
+    error
+fi
+
+res=$($fib_t10; echo $?)
+
+if [ $res != 55 ]; then
+    echo "Fail: $fib_t10 ($res)"
+    error
+fi
+
 
 # fib: if.else3
 
@@ -278,19 +377,8 @@ printf "[Testing] fib: if.else3 @ fib\n"
 
 basic_block="if.else3"
 fn="fib"
-checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
-llc ${checked} -o ${assembly}
-clang ${assembly} -o ${binary}
-
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
-cval0=$(echo $?)
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
-cval1=$(echo $?)
-
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
+./checker.sh ${program} ${fn} ${basic_block} 1
 
 res=$($fib_t1; echo $?)
 
@@ -313,13 +401,49 @@ if [ $res != 55 ]; then
     error
 fi
 
+# fib: if.else3 (7 checkers)
+
+printf "[Testing] fib: if.else3 @ fib (7 checkers)\n"
+
+basic_block="if.else3"
+fn="fib"
+
+./checker.sh ${program} ${fn} ${basic_block} 7
+
+res=$($fib_t1; echo $?)
+
+if [ $res != 1 ]; then
+    echo "Fail: $fib_t1 ($res)"
+    error
+fi
+
+res=$($fib_t5; echo $?)
+
+if [ $res != 5 ]; then
+    echo "Fail: $fib_t5 ($res)"
+    error
+fi
+
+res=$($fib_t10; echo $?)
+
+if [ $res != 55 ]; then
+    echo "Fail: $fib_t10 ($res)"
+    error
+fi
+
+
 echo "[Cleanup] Removing files..."
 rm fac*
 rm fib*
 rm pow*
 
+printf ".%.0s" {1..75}
+
+echo
+
 echo "[Success] All tests passed..."
 exit 0
+
 
 
 

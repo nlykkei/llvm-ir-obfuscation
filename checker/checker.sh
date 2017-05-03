@@ -2,7 +2,7 @@
 
 usage()
 {
-    echo "Usage ./checker.sh <program> <basic_block> [function]"
+    echo "Usage ./checker.sh <program> <function> <basic_block> <num_checkers>"
 }
 
 case  $1 in
@@ -26,9 +26,23 @@ if [ "$2" == "" ]; then
     exit 1
 fi
 
+if [ "$3" == "" ]; then
+    echo "Missing parameter: <fn>"
+    usage
+    exit 1
+fi
+
+if [ "$4" == "" ]; then
+    echo "Missing parameter: <num_checkers>"
+    usage
+    exit 1
+fi
+
+
 program=$1 # llvm bytecode program
-basic_block=$2 # basic block
-fn=$3 # function
+fn=$2 # function
+basic_block=$3 # basic block
+num_checkers=$4 # number of chained checkers
 
 base=$(basename "$program" ".ll")
 checked=${base}\_c.ll
@@ -37,29 +51,22 @@ binary=${base}\_c
 #checkpid=`cat /proc/sys/kernel/random/uuid`
 checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkbb=${basic_block} -checkfn=${fn} -checkpid=${checkpid}
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkfn=${fn} -checkbb=${basic_block} -checkpid=${checkpid} -checknum=${num_checkers}
 llc ${checked} -o ${assembly}
 clang ${assembly} -o ${binary}
 
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\0 .cend_$checkpid\0
+
+while IFS=":" read cstart cend cslot
+do
+#echo Read: ${cstart} ${cend} ${cslot}
+objdump -d ${binary} | ./cval.py ${cstart} ${cend}
 cval0=$(echo $?)
-objdump -d ${binary} | ./cval.py .cstart_$checkpid\1 .cend_$checkpid\1
-cval1=$(echo $?)
 
-echo "[INFO] Corrector value for basic block: ${cval0}"
-echo "[INFO] Corrector value for checker: ${cval1}"
+#echo "Corrector value for basic block: ${cval0}"
 
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\0 $cval0
-cslot0=$(echo $?)
-objdump -dF ${binary} | ./cslot.py $binary .cslot_$checkpid\1 $cval1
-cslot1=$(echo $?)
+objdump -dF ${binary} | ./cslot.py $binary ${cslot} $cval0
+done < corrector.dat
 
-if [ $cslot0 != 0 ] || [ $cslot1 != 0 ]; then
-    echo "Failed to initialize corrector slots"
-    exit -1
-fi
-
-echo "[INFO] Success..."
 exit 0
 
 
