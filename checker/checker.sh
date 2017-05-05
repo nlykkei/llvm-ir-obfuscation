@@ -51,7 +51,7 @@ binary=${base}\_c
 #checkpid=`cat /proc/sys/kernel/random/uuid`
 checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkfn=${fn} -checkbb=${basic_block} -checkpid=${checkpid} -checknum=${num_checkers} -debug
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkfn=${fn} -checkbb=${basic_block} -checkpid=${checkpid} -checknum=${num_checkers}
 llc ${checked} -o ${assembly}
 clang ${assembly} -o ${binary}
 

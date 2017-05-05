@@ -161,13 +161,13 @@ namespace {
                                 Function::iterator It = F.begin();
                                 std::advance(It, randPos);
                                 BasicBlock *InsertBB = &*It;
-                                DEBUG(errs() << std::string(8, ' ') << "Inserted checker \'" << Id1
+                                DEBUG(errs() << std::string(8, ' ') << "Inserting checker \'" << Id1
                                              << "\' for checker \'"
                                              << Id0
                                              << "\' before basic block \'" << InsertBB->getName() << "\'" << "\n");
                                 Checker = insertCheckerBefore(InsertBB, Id1, CheckTy);
 
-                                Id1 = Id0;
+                                Id0 = Id1;
                             }
 
                             DEBUG(errs() << std::string(0, ' ') << "Succeeded to insert checker for basic block \'"
