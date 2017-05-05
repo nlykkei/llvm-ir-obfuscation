@@ -51,19 +51,17 @@ binary=${base}\_c
 #checkpid=`cat /proc/sys/kernel/random/uuid`
 checkpid="c$(($RANDOM % 100))"
 
-opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkfn=${fn} -checkbb=${basic_block} -checkpid=${checkpid} -checknum=${num_checkers}
+opt -load ../cmake-build-debug/checker/libCheckerTPass.so -checkerT -S ${program} -o ${checked} -checkfn=${fn} -checkbb=${basic_block} -checkpid=${checkpid} -checknum=${num_checkers} -debug
 llc ${checked} -o ${assembly}
 clang ${assembly} -o ${binary}
 
 
-while IFS=":" read cstart cend cslot
+while IFS=":" read cstart cend cslot ctype
 do
 #echo Read: ${cstart} ${cend} ${cslot}
-objdump -d ${binary} | ./cval.py ${cstart} ${cend}
+objdump -dz ${binary} | ./cval.py ${cstart} ${cend} ${ctype}
 cval0=$(echo $?)
-
 #echo "Corrector value for basic block: ${cval0}"
-
 objdump -dF ${binary} | ./cslot.py $binary ${cslot} $cval0
 done < corrector.dat
 

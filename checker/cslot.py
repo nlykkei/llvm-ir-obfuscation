@@ -5,7 +5,7 @@ import sys
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: ./{program} program cslot_label cval".format(program=sys.argv[0]))
+        print("Usage: ./{program} <program> <cslot_label> <cval>".format(program=sys.argv[0]))
         exit(1)
 
     program = sys.argv[1]

@@ -68,7 +68,7 @@ namespace {
             file.close();
         }
 
-        BasicBlock *insertCheckerBefore(BasicBlock *BB, std::string &Id);
+        BasicBlock *insertCheckerBefore(BasicBlock *BB, std::string &Id, int CheckTy);
 
         bool insertCorrectorSlot(BasicBlock *BB, std::string &Id);
 
@@ -123,7 +123,10 @@ namespace {
                             }
 
                             std::string Id0 = CheckPID + std::to_string(0);
-                            file << ".cstart_" << Id0 << ":" << ".cend_" << Id0 << ":" << ".cslot_" + Id0 << "\n";
+                            int CheckTy = rand() % 5;
+
+                            file << ".cstart_" << Id0 << ":" << ".cend_" << Id0 << ":" << ".cslot_" + Id0 << ":"
+                                 << CheckTy << "\n";
 
                             // Insert corrector slot into basic block
                             DEBUG(errs() << std::string(8, ' ') << "Inserting corrector slot into basic block \'"
@@ -135,12 +138,15 @@ namespace {
                             DEBUG(errs() << std::string(8, ' ') << "Inserting dominating checker \'" << Id0
                                          << "\' for basic block \'"
                                          << BB.getName() << "\'" << "\n");
-                            BasicBlock *Checker = insertCheckerBefore(&BB, Id0);
+                            BasicBlock *Checker = insertCheckerBefore(&BB, Id0, CheckTy);
 
                             for (int i = 1; i <= CheckNum; ++i) {
 
                                 std::string Id1 = CheckPID + std::to_string(i);
-                                file << ".cstart_" << Id1 << ":" << ".cend_" << Id1 << ":" << ".cslot_" + Id1 << "\n";
+                                int CheckTy = rand() % 5;
+
+                                file << ".cstart_" << Id1 << ":" << ".cend_" << Id1 << ":" << ".cslot_" + Id1 << ":"
+                                     << CheckTy << "\n";
 
                                 // Insert corrector slot into checker
                                 DEBUG(errs() << std::string(8, ' ') << "Inserting corrector slot into checker \'" << Id0
@@ -159,7 +165,7 @@ namespace {
                                              << "\' for checker \'"
                                              << Id0
                                              << "\' before basic block \'" << InsertBB->getName() << "\'" << "\n");
-                                Checker = insertCheckerBefore(InsertBB, Id1);
+                                Checker = insertCheckerBefore(InsertBB, Id1, CheckTy);
 
                                 Id1 = Id0;
                             }
@@ -204,6 +210,8 @@ bool CheckerT::insertCorrectorSlot(BasicBlock *BB, std::string &Id) {
 
     IRBuilder<> Builder(&*BB->getFirstInsertionPt());
     Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string("nop"), "", true));
+    //Builder.CreateCall(
+    //        InlineAsm::get(VoidFunTy, std::string(".align 4"), "", true));
     Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string(".cstart_") + Id + std::string(":"), "", true));
     Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string("jmp .end_") + Id, "", true));
     Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string(".cslot_") + Id + std::string(":"), "", true));
@@ -215,14 +223,20 @@ bool CheckerT::insertCorrectorSlot(BasicBlock *BB, std::string &Id) {
     Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string(".end_") + Id + std::string(":"), "", true));
 
     Builder.SetInsertPoint(BB->getTerminator());
+    //Builder.CreateCall(
+    //        InlineAsm::get(VoidFunTy, std::string(".align 4"), "", true));
     Builder.CreateCall(InlineAsm::get(VoidFunTy, std::string(".cend_") + Id + std::string(":"), "", true));
 
     return true;
 }
 
-BasicBlock *CheckerT::insertCheckerBefore(BasicBlock *BB, std::string &Id) {
+BasicBlock *CheckerT::insertCheckerBefore(BasicBlock *BB, std::string &Id, int CheckTy) {
     std::vector<Type *> ArgsTy;
     FunctionType *FunTy = FunctionType::get(Type::getVoidTy(BB->getContext()), ArgsTy, false);
+
+    std::vector<Type *> ArgsTy2;
+    ArgsTy2.push_back(Type::getInt32Ty(BB->getContext()));
+    FunctionType *IntFunTy = FunctionType::get(Type::getVoidTy(BB->getContext()), ArgsTy2, false);
 
     // Split basic block at first non PHI node
     Instruction *SplitInst = BB->getFirstNonPHI();
@@ -235,29 +249,111 @@ BasicBlock *CheckerT::insertCheckerBefore(BasicBlock *BB, std::string &Id) {
 
     // Make 'BB' a checker of 'SplitBB' (unique predecessor)
     IRBuilder<> Builder(&BB->back());
-    Builder.CreateCall(
-            InlineAsm::get(FunTy, std::string("subq $$") + std::to_string(RED_ZONE) + std::string(", %rsp"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rax"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rbx"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rsi"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("xorq %rax, %rax"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("movq $$.cstart_") + Id + std::string(", %rsi"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string(".cloop_") + Id + std::string(":"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("movzbq (%rsi), %rbx"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("xorq %rbx, %rax"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("inc %rsi"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("cmpq $$.cend_") + Id + std::string(", %rsi"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("jne .cloop_") + Id, "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("cmpq $$0, %rax"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("je .restore_") + Id, "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("xorq %rax, %rax"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("callq *%rax"), "", true)); // trigger runtime error
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string(".restore_") + Id + std::string(":"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rsi"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rbx"), "", true));
-    Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rax"), "", true));
-    Builder.CreateCall(
-            InlineAsm::get(FunTy, std::string("addq $$") + std::to_string(RED_ZONE) + std::string(", %rsp"), "", true));
+
+    int C[] = {3, 5, 7, 11};
+
+    if (CheckTy == 0) {
+        // XOR checker
+        Builder.CreateCall(
+                InlineAsm::get(FunTy, std::string("subq $$") + std::to_string(RED_ZONE) + std::string(", %rsp"), "",
+                               true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rax"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rbx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rsi"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("xorq %rax, %rax"), "", true));
+        Builder.CreateCall(
+                InlineAsm::get(FunTy, std::string("movq $$.cstart_") + Id + std::string(", %rsi"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string(".cloop_") + Id + std::string(":"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("movzbq (%rsi), %rbx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("xorq %rbx, %rax"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("inc %rsi"), "", true));
+        Builder.CreateCall(
+                InlineAsm::get(FunTy, std::string("cmpq $$.cend_") + Id + std::string(", %rsi"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("jne .cloop_") + Id, "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("cmpq $$0, %rax"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("je .restore_") + Id, "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("xorq %rax, %rax"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("callq *%rax"), "", true)); // trigger runtime error
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string(".restore_") + Id + std::string(":"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rsi"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rbx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rax"), "", true));
+        Builder.CreateCall(
+                InlineAsm::get(FunTy, std::string("addq $$") + std::to_string(RED_ZONE) + std::string(", %rsp"), "",
+                               true));
+    } else {
+        // hash5 checker
+
+        int CMul = C[CheckTy - 1];
+        int LOffset = rand() % 1000;
+
+        Builder.CreateCall(
+                InlineAsm::get(FunTy, std::string("subq $$") + std::to_string(RED_ZONE) + std::string(", %rsp"), "",
+                               true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rax"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rcx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rdx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rbx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("pushq %rsi"), "", true));
+
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("xorq %rax, %rax"), "", true));
+
+        std::vector<Value *> CArgs0;
+        CArgs0.push_back(ConstantInt::get(Type::getInt32Ty(BB->getContext()), LOffset));
+        Builder.CreateCall(
+                InlineAsm::get(IntFunTy, std::string("movq $$.cstart_") + Id + std::string(" - ${0:c}, %rsi"), "i", true), CArgs0);
+        Builder.CreateCall(
+                InlineAsm::get(IntFunTy, std::string("addq ${0}, %rsi"), "i", true), CArgs0);
+
+        Builder.CreateCall(
+                InlineAsm::get(FunTy, std::string("movq $$.cstart_") + Id + std::string(", %rsi"), "", true));
+
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string(".cloop_") + Id + std::string(":"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("movzbq (%rsi), %rbx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("addq %rbx, %rax"), "", true));
+
+        std::vector<Value *> CArgs1;
+        CArgs1.push_back(ConstantInt::get(Type::getInt32Ty(BB->getContext()), CMul));
+        Builder.CreateCall(InlineAsm::get(IntFunTy, std::string("movq ${0}, %rcx"), "i", true), CArgs1);
+
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("mulq %rcx"), "", true));
+
+        std::vector<Value *> CArgs2;
+        CArgs2.push_back(ConstantInt::get(Type::getInt32Ty(BB->getContext()), 256));
+        Builder.CreateCall(InlineAsm::get(IntFunTy, std::string("movq ${0}, %rcx"), "i", true), CArgs2);
+
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("cqo"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("divq %rcx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("movq %rdx, %rax"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("inc %rsi"), "", true));
+
+        LOffset = rand() % 1000;
+
+        std::vector<Value *> CArgs3;
+        CArgs3.push_back(ConstantInt::get(Type::getInt32Ty(BB->getContext()), LOffset));
+        Builder.CreateCall(
+                InlineAsm::get(IntFunTy, std::string("movq $$.cend_") + Id + std::string(" - ${0:c}, %rdx"), "i", true), CArgs3);
+        Builder.CreateCall(
+                InlineAsm::get(IntFunTy, std::string("addq ${0}, %rdx"), "i", true), CArgs3);
+
+        Builder.CreateCall(
+                InlineAsm::get(FunTy, std::string("cmpq %rdx, %rsi"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("jne .cloop_") + Id, "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("cmpq $$0, %rax"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("je .restore_") + Id, "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("xorq %rax, %rax"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("callq *%rax"), "", true)); // trigger runtime error
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string(".restore_") + Id + std::string(":"), "", true));
+
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rsi"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rbx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rdx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rcx"), "", true));
+        Builder.CreateCall(InlineAsm::get(FunTy, std::string("popq %rax"), "", true));
+        Builder.CreateCall(
+                InlineAsm::get(FunTy, std::string("addq $$") + std::to_string(RED_ZONE) + std::string(", %rsp"), "",
+                               true));
+    }
 
     return BB;
 }
