@@ -7,7 +7,8 @@ usage()
 
 error()
 {
-    printf "[Error] Test failed: %s\n" $1
+    printf "[Error] Test failed: %s\n" "$1"
+    opt -view-cfg ${binary}\.ll
     exit 1
 }
 
@@ -40,7 +41,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 17: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -64,7 +65,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 41: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -88,7 +89,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 257: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -118,7 +119,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 301: ${res}"
 fi
 
 echo "[Testing] Unit tests of ${binary}"
@@ -128,7 +129,7 @@ res=$(./${binary}; echo $?)
 if [ ${res} == 100 ]; then
     echo "[Success] ${binary} computes expected result: ${res}"
 else
-    error "${res}"
+    error "${binary} = ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -158,7 +159,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 29: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -182,7 +183,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 59: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -206,7 +207,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 141: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -236,7 +237,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 289: ${res}"
 fi
 
 echo "[Testing] Unit tests of ${binary}"
@@ -246,7 +247,7 @@ res=$(./${binary} 5; echo $?)
 if [ ${res} == 120 ]; then
     echo "[Success] ${binary} 5 computes expected result: ${res}"
 else
-    error "${res}"
+    error "${binary} 5 = ${res}"
 fi
 
 res=$(./${binary} 3; echo $?)
@@ -254,7 +255,7 @@ res=$(./${binary} 3; echo $?)
 if [ ${res} == 6 ]; then
     echo "[Success] ${binary} 3 computes expected result: ${res}"
 else
-    error "${res}"
+    error "${binary} 3 = ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -284,7 +285,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 14: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -308,7 +309,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 61: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -332,7 +333,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 331: ${res}"
 fi
 
 echo "[Cleaning] Removing files..."
@@ -362,7 +363,7 @@ res=$(./extract_wm.sh ${binary} ${key} "${primes[@]}")
 if [ ${res} == ${watermark} ]; then
     echo "[Success] Extracted watermark ${res} from ${binary}"
 else
-    error "${res}"
+    error "${binary} 891: ${res}"
 fi
 
 echo "[Testing] Unit tests of ${binary}"
@@ -372,7 +373,7 @@ res=$(./${binary} 2 5; echo $?)
 if [ ${res} == 32 ]; then
     echo "[Success] ${binary} 2 5 computes expected result: ${res}"
 else
-    error "${res}"
+    error "${binary} 2 5 = ${res}"
 fi
 
 res=$(./${binary} 3 4; echo $?)
@@ -380,7 +381,7 @@ res=$(./${binary} 3 4; echo $?)
 if [ ${res} == 81 ]; then
     echo "[Success] ${binary} 3 4 computes expected result: ${res}"
 else
-    error "${res}"
+    error "${binary} 3 4 = ${res}"
 fi
 
 echo "[Cleaning] Removing files..."

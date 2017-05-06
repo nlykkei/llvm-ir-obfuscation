@@ -8,7 +8,7 @@ usage()
 error()
 {
     opt -view-cfg ${checked}
-    exit -1
+    exit 1
 }
 
 case  $1 in
@@ -169,6 +169,8 @@ pow_t2_7="./pow_c 2 7"
 pow_t3_3="./pow_c 3 3"
 pow_t4_3="./pow_c 4 3"
 pow_t5_2="./pow_c 5 2"
+pow_t2_5="./pow_c 2 5"
+pow_t3_4="./pow_c 3 4"
 
 program="../programs/ll/pow.ll"
 base=$(basename "$program" ".ll")
@@ -293,6 +295,21 @@ res=$($pow_t4_3; echo $?)
 
 if [ $res != 64 ]; then
     echo "Fail: $pow_t4_3 ($res)"
+    error
+fi
+
+res=$($pow_t2_5; echo $?)
+
+if [ ${res} != 32 ]; then
+    echo "Fail: $pow_t2_5 ($res)"
+    error
+fi
+
+
+res=$($pow_t3_4; echo $?)
+
+if [ ${res} != 81 ]; then
+    echo "Fail: $pow_t3_4 ($res)"
     error
 fi
 

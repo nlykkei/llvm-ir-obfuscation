@@ -24,15 +24,17 @@ def main():
     prefix = bytes(iter([0x66] * 15))
 
     input = sys.stdin.read().split()
-    text_offset = int(input[2], 16)
-    text_size = int(input[5], 16)
+    text_offset = int(input[5], 16)
+    log('text_offset: 0x%x' % text_offset)
+    text_size = int(input[2], 16)
+    log('text_size: 0x%x' % text_size)
 
     with open(program, 'rb+') as f:
         f.seek(text_offset)
         for i in range(text_size - 15 + 1):
             bytes_read = f.read(15)
             if (bytes_read == bytes(iter([0x66] * 15))):
-                log("Found byte sequence at position: %d" % int(text_offset + i))
+                log("Found byte sequence at position: 0x%x" % int(text_offset + i))
                 split_bytes = f.read(4)
                 wm_split = int.from_bytes(split_bytes, byteorder='little', signed=False)
                 wm_splits.append(wm_split)

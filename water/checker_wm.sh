@@ -81,10 +81,10 @@ opt -load ../cmake-build-debug/water/libWMCheckerTPass.so -checkerWMT -S ${marke
 llc ${marked_checked} -o ${assembly}
 clang ${assembly} -o ${binary}
 
-while IFS=":" read cstart cend cslot
+while IFS=":" read cstart cend cslot check_type
 do
-#echo Read: ${cstart} ${cend} ${cslot}
-objdump -d ${binary} | ./cval_wm.py ${cstart} ${cend}
+#echo Read: ${cstart} ${cend} ${cslot} ${check_type}
+objdump -dz ${binary} | ./cval_wm.py ${cstart} ${cend} ${check_type}
 cval0=$(echo $?)
 
 #echo "Corrector value for basic block: ${cval0}"
